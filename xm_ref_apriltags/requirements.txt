@@ -1,18 +1,20 @@
 # Requirements for Pi Zero 2W Camera Server System
-# Install with: pip install -r requirements.txt
+# IMPORTANT: Install packages individually due to Pi Zero 2W limitations
+# DO NOT use: pip install -r requirements.txt (may timeout)
 
-# Essential packages for camera server
+# Essential packages for camera server (install one by one)
 PyYAML>=6.0
 python-dotenv>=1.0.0
 
-# Camera support (install via pip, fallback to system package)
-picamera2>=0.3.12
+# Camera support - PREFER SYSTEM PACKAGE to avoid compilation
+# sudo apt install python3-picamera2 (recommended)
+# OR: pip install --timeout=300 picamera2>=0.3.12 (may timeout)
 
 # Required for solid_dosing_server imports
 # socket, threading, datetime, pathlib, time - all built-in to Python
 
-# Basic utilities
-pathlib2>=2.3.7; python_version<"3.4"
+# Basic utilities (skip on older Python)
+# pathlib2>=2.3.7; python_version<"3.4"
 
 # Optional: Lightweight packages
 coloredlogs>=15.0

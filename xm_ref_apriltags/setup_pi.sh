@@ -61,12 +61,16 @@ echo "Installing Python packages..."
 source ur3_cam_env/bin/activate
 pip install --upgrade pip
 
+# Configure pip for slow Pi Zero 2W connections
+pip config set global.timeout 300
+pip config set global.retries 5
+
 # Install packages with error handling
-echo "Installing essential Python packages..."
+echo "Installing essential Python packages (may take several minutes)..."
 
 # Try to install yaml first
 echo "Installing PyYAML..."
-pip install PyYAML || {
+pip install --timeout=300 --retries=5 PyYAML || {
     echo "PyYAML pip install failed, checking system package..."
     python3 -c "
 import sys
@@ -83,10 +87,10 @@ except ImportError:
 }
 
 echo "Installing python-dotenv..."
-pip install python-dotenv || echo "python-dotenv failed, continuing..."
+pip install --timeout=300 --retries=5 python-dotenv || echo "python-dotenv failed, continuing..."
 
 echo "Installing picamera2..."
-pip install picamera2 || {
+pip install --timeout=300 --retries=5 picamera2 || {
     echo "picamera2 pip install failed, checking system package..."
     python3 -c "
 import sys
