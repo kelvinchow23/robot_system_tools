@@ -1,0 +1,34 @@
+# Requirements for Pi Zero 2W Camera Server System
+# Install with: pip install -r requirements.txt
+
+# Core camera and image processing
+picamera2>=0.3.12
+libcamera>=0.0.5
+
+# Image processing and computer vision
+opencv-python>=4.8.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+
+# AprilTag detection
+pupil-apriltags>=1.0.4
+
+# Scientific computing for pose estimation
+scipy>=1.10.0
+
+# Configuration and utilities
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# Networking (usually included in Python, but just in case)
+# socket - built-in
+# threading - built-in
+
+# System utilities
+pathlib2>=2.3.7; python_version<"3.4"
+
+# Optional: For better logging and debugging
+coloredlogs>=15.0
+
+# Optional: For performance monitoring
+psutil>=5.9.0
