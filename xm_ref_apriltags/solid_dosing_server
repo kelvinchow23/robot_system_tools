@@ -1,9 +1,14 @@
 import os
+import sys
 import socket
 import yaml 
 import threading
 from datetime import datetime
 from pathlib import Path
+
+# Add system packages path for picamera2 and libcamera (confirmed location from diagnostic)
+sys.path.insert(0, '/usr/lib/python3/dist-packages')
+
 from picamera2 import Picamera2
 from libcamera import controls, Transform
 from time import sleep
