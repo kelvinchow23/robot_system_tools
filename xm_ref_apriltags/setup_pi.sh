@@ -30,7 +30,9 @@ sudo apt install -y \
     python3-libcamera \
     libatlas-base-dev \
     libjpeg-dev \
-    python3-opencv
+    python3-opencv \
+    libcap-dev \
+    build-essential
 
 # Check if camera is enabled
 echo "Checking camera configuration..."
