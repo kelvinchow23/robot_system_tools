@@ -3,10 +3,10 @@
 
 # Core camera and image processing
 picamera2>=0.3.12
-libcamera>=0.0.5
+# libcamera is a system package, not pip installable
 
-# Image processing and computer vision
-opencv-python>=4.8.0
+# Image processing and computer vision  
+# opencv-python>=4.8.0  # Use system package python3-opencv instead
 numpy>=1.24.0
 matplotlib>=3.7.0
 
@@ -32,3 +32,7 @@ coloredlogs>=15.0
 
 # Optional: For performance monitoring
 psutil>=5.9.0
+
+# Note: The following are system packages, install via apt:
+# - libcamera (sudo apt install libcamera-dev libcamera-apps python3-libcamera)
+# - opencv (sudo apt install python3-opencv)
