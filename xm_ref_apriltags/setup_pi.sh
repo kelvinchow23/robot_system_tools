@@ -32,7 +32,12 @@ sudo apt install -y \
     libjpeg-dev \
     python3-opencv \
     libcap-dev \
-    build-essential
+    build-essential \
+    python3-yaml \
+    python3-numpy
+
+# Try to install picamera2 system package if available
+sudo apt install -y python3-picamera2 || echo "python3-picamera2 not available, will install via pip"
 
 # Check if camera is enabled
 echo "Checking camera configuration..."
@@ -44,51 +49,116 @@ fi
 
 # Setup virtual environment
 echo "Setting up Python virtual environment..."
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
+if [ ! -d "ur3_cam_env" ]; then
+    echo "Creating ur3_cam_env virtual environment..."
+    python3 -m venv ur3_cam_env
+else
+    echo "Using existing ur3_cam_env virtual environment..."
 fi
 
 # Activate virtual environment and install packages
 echo "Installing Python packages..."
-source venv/bin/activate
+source ur3_cam_env/bin/activate
 pip install --upgrade pip
 
 # Install packages with error handling
-pip install -r requirements.txt || {
-    echo "Some packages failed to install. Trying with system packages..."
-    pip install picamera2 PyYAML python-dotenv pupil-apriltags scipy
+echo "Installing essential Python packages..."
+
+# Try to install yaml first
+echo "Installing PyYAML..."
+pip install PyYAML || {
+    echo "PyYAML pip install failed, checking system package..."
+    python3 -c "
+import sys
+sys.path.insert(0, '/usr/lib/python3/dist-packages')
+try:
+    import yaml
+    print('✓ Using system yaml package')
+except ImportError:
+    print('✗ yaml not available via system packages either')
+    print('Trying to install python3-yaml system package...')
+    import subprocess
+    subprocess.run(['sudo', 'apt', 'install', '-y', 'python3-yaml'])
+"
 }
+
+echo "Installing python-dotenv..."
+pip install python-dotenv || echo "python-dotenv failed, continuing..."
+
+echo "Installing picamera2..."
+pip install picamera2 || {
+    echo "picamera2 pip install failed, checking system package..."
+    python3 -c "
+import sys
+sys.path.insert(0, '/usr/lib/python3/dist-packages')
+try:
+    from picamera2 import Picamera2
+    print('✓ Using system picamera2 package')
+except ImportError:
+    print('✗ picamera2 not available via system packages either')
+    exit(1)
+"
+}
+
+echo "Skipping heavy packages (numpy, scipy, apriltags) to avoid memory issues..."
+echo "You can install them manually later if needed."
 
 # Test camera
 echo "Testing camera setup..."
 python3 -c "
+import sys
+sys.path.insert(0, '/usr/lib/python3/dist-packages')  # Include system packages
 try:
     from picamera2 import Picamera2
     print('✓ Picamera2 import successful')
     cam = Picamera2()
     print('✓ Camera initialization successful')
     cam.close()
+    print('✓ Camera test completed successfully')
 except Exception as e:
     print(f'✗ Camera test failed: {e}')
+    print('Try: sudo raspi-config -> Interface Options -> Camera -> Enable')
 "
 
-# Test AprilTag detection
-echo "Testing AprilTag detection..."
+# Test basic server dependencies
+echo "Testing server dependencies..."
 python3 -c "
+import sys
+sys.path.insert(0, '/usr/lib/python3/dist-packages')
 try:
-    from pupil_apriltags import Detector
-    print('✓ AprilTag detector import successful')
-    detector = Detector()
-    print('✓ AprilTag detector initialization successful')
+    import socket, threading, os
+    from datetime import datetime
+    from pathlib import Path
+    from time import sleep
+    print('✓ Basic Python modules working')
+    
+    # Test yaml specifically
+    try:
+        import yaml
+        print('✓ yaml module working')
+    except ImportError:
+        print('✗ yaml module still not found')
+        print('Try: sudo apt install python3-yaml')
+        exit(1)
+        
+    print('✓ All basic server dependencies working')
 except Exception as e:
-    print(f'✗ AprilTag test failed: {e}')
+    print(f'✗ Server dependency test failed: {e}')
 "
+
+# Skip AprilTag test for now
+echo "Skipping AprilTag test (not installed to avoid memory issues)"
 
 echo ""
 echo "=== Setup Complete ==="
 echo "To run the camera server:"
-echo "  source venv/bin/activate"
+echo "  source ur3_cam_env/bin/activate"
 echo "  python3 solid_dosing_server"
+echo ""
+echo "Note: AprilTag detection not installed due to Pi Zero 2W memory limitations"
+echo "To install AprilTag support later (if you have more memory/swap):"
+echo "  source ur3_cam_env/bin/activate"
+echo "  pip install pupil-apriltags"
 echo ""
 echo "If camera test failed, you may need to:"
 echo "  1. Reboot the Pi (if camera was just enabled)"

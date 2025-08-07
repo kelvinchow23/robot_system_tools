@@ -1,38 +1,30 @@
 # Requirements for Pi Zero 2W Camera Server System
 # Install with: pip install -r requirements.txt
 
-# Core camera and image processing
-picamera2>=0.3.12
-# libcamera is a system package, not pip installable
-
-# Image processing and computer vision  
-# opencv-python>=4.8.0  # Use system package python3-opencv instead
-numpy>=1.24.0
-matplotlib>=3.7.0
-
-# AprilTag detection
-pupil-apriltags>=1.0.4
-
-# Scientific computing for pose estimation
-scipy>=1.10.0
-
-# Configuration and utilities
+# Essential packages for camera server
 PyYAML>=6.0
 python-dotenv>=1.0.0
 
-# Networking (usually included in Python, but just in case)
-# socket - built-in
-# threading - built-in
+# Camera support (install via pip, fallback to system package)
+picamera2>=0.3.12
 
-# System utilities
+# Required for solid_dosing_server imports
+# socket, threading, datetime, pathlib, time - all built-in to Python
+
+# Basic utilities
 pathlib2>=2.3.7; python_version<"3.4"
 
-# Optional: For better logging and debugging
+# Optional: Lightweight packages
 coloredlogs>=15.0
 
-# Optional: For performance monitoring
-psutil>=5.9.0
+# AprilTag detection (optional, may fail on Pi Zero 2W due to memory)
+# pupil-apriltags>=1.0.4  # Commented out due to compilation issues
 
-# Note: The following are system packages, install via apt:
-# - libcamera (sudo apt install libcamera-dev libcamera-apps python3-libcamera)
-# - opencv (sudo apt install python3-opencv)
+# Heavy packages (install manually if needed)
+# numpy>=1.24.0
+# matplotlib>=3.7.0  
+# scipy>=1.10.0
+
+# Note: Install these via system packages to avoid compilation:
+# sudo apt install python3-numpy python3-matplotlib python3-scipy
+# sudo apt install python3-opencv python3-picamera2 (if available)
