@@ -136,9 +136,17 @@ class CameraServer:
         cam = Picamera2(0) # Connects to the first (for our case, the only) camera module the Pi encounters
         config = cam.create_still_configuration(transform = Transform(hflip = 1,vflip = 1)) # Sets a still image configuration for the camera (to take photos, not videos)
         cam.configure(config)
-        # Checks if the camera has autofocus mode and enables it to be on continuously
+        # Checks if the camera has autofocus mode and enables it
         if 'AfMode' in cam.camera_controls:
-            cam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": 100})
+            # Switch to autofocus mode for automatic focusing
+            # Options: controls.AfModeEnum.Auto, controls.AfModeEnum.Continuous, controls.AfModeEnum.Manual
+            cam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+            self.logger.info("Camera focus set to Continuous Autofocus")
+            
+            # Optional: If you want to go back to manual focus, uncomment below:
+            # lens_position = 400  # Adjust this value for better focus
+            # cam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": lens_position})
+            # self.logger.info(f"Camera focus set to Manual LensPosition: {lens_position}")
         cam.start()
         self.logger.info ("Camera initiated")
         return cam

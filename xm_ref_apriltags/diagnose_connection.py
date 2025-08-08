@@ -50,7 +50,30 @@ def ping_test(host):
         return False
 
 if __name__ == "__main__":
-    host = "192.168.1.3"
+    # Try to detect Pi IP or ask user
+    print("Detecting Pi IP address...")
+    
+    # Try common Pi hostnames first
+    possible_hosts = [
+        "192.168.1.3",
+        "192.168.0.3", 
+        "ur3-picam-apriltag.local",
+        "ur3-picam-apriltag"
+    ]
+    
+    detected_host = None
+    for test_host in possible_hosts:
+        print(f"Testing {test_host}...")
+        if ping_test(test_host):
+            detected_host = test_host
+            print(f"✅ Found Pi at: {test_host}")
+            break
+    
+    if not detected_host:
+        print("Could not auto-detect Pi. Please enter IP manually.")
+        detected_host = input("Enter Pi IP address: ").strip()
+    
+    host = detected_host
     port = 2222
     
     print("=== Pi Camera Server Connection Diagnostic ===")

@@ -102,7 +102,7 @@ def receive_file(conn, file_size, chunk_size, logger):
 
 # Get settings from environment variables
 
-server_ip = os.getenv ("SERVER_IP", "192.168.1.3")
+server_ip = os.getenv ("SERVER_IP", "ur3-picam-apriltag")
 server_port = int (os.getenv ("SERVER_PORT", 2222))
 buffer_size = int (os.getenv ("BUFFER_SIZE", 2048))
 chunk_size = int (os.getenv ("CHUNK_SIZE", 1024))
