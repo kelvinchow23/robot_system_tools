@@ -1,17 +1,108 @@
 import os
 import socket
+import logging  # Temporary for simple logger
 from pathlib import Path
 from time import sleep
-from dotenv import load_dotenv
-from sdl_utils import get_logger
-from sdl_utils import connect_socket, send_file_name, receive_file_name, send_file_size, receive_file_size, receive_file
+# from dotenv import load_dotenv  # Commented out temporarily
+# from sdl_utils import get_logger  # Commented out temporarily
+# from sdl_utils import connect_socket, send_file_name, receive_file_name, send_file_size, receive_file_size, receive_file  # Commented out temporarily
 
-# Load environment variables from .env file
-load_dotenv()
+# ============================================================================
+# TEMPORARY REPLACEMENT FUNCTIONS (remove when sdl_utils is working)
+# ============================================================================
+
+# Simple logging setup (replacing sdl_utils.get_logger)
+def get_logger(name):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    return logger
+
+# Simple socket connection (replacing sdl_utils.connect_socket)
+def connect_socket(sock, host, port, logger):
+    try:
+        sock.connect((host, port))
+        logger.info(f"Connected to {host}:{port}")
+        return sock
+    except Exception as e:
+        logger.error(f"Failed to connect to {host}:{port}: {e}")
+        return None
+
+# Simple file transfer functions (matching the server functions)
+def send_file_name(conn, filename, logger):
+    filename_bytes = filename.encode('utf-8')
+    filename_length = len(filename_bytes)
+    conn.sendall(filename_length.to_bytes(4, byteorder='big'))
+    conn.sendall(filename_bytes)
+    logger.info(f"Sent filename: {filename}")
+
+def receive_file_name(conn, logger):
+    try:
+        length_bytes = conn.recv(4)
+        if len(length_bytes) != 4:
+            return None
+        length = int.from_bytes(length_bytes, byteorder='big')
+        filename_bytes = conn.recv(length)
+        filename = filename_bytes.decode('utf-8')
+        logger.info(f"Received filename: {filename}")
+        return filename
+    except Exception as e:
+        logger.error(f"Error receiving filename: {e}")
+        return None
+
+def send_file_size(conn, size, logger):
+    size_str = str(size)
+    size_bytes = size_str.encode('utf-8')
+    size_length = len(size_bytes)
+    conn.sendall(size_length.to_bytes(4, byteorder='big'))
+    conn.sendall(size_bytes)
+    logger.info(f"Sent file size: {size}")
+
+def receive_file_size(conn, logger):
+    try:
+        length_bytes = conn.recv(4)
+        if len(length_bytes) != 4:
+            return None
+        length = int.from_bytes(length_bytes, byteorder='big')
+        size_bytes = conn.recv(length)
+        size_str = size_bytes.decode('utf-8')
+        logger.info(f"Received file size: {size_str}")
+        return int(size_str)  # Return as integer for file operations
+    except Exception as e:
+        logger.error(f"Error receiving file size: {e}")
+        return None
+
+def receive_file(conn, file_size, chunk_size, logger):
+    """Receive file data in chunks"""
+    received_data = b''
+    bytes_received = 0
+    
+    while bytes_received < file_size:
+        remaining = file_size - bytes_received
+        recv_size = min(chunk_size, remaining)
+        chunk = conn.recv(recv_size)
+        if not chunk:
+            break
+        received_data += chunk
+        bytes_received += len(chunk)
+        
+    logger.info(f"Received {bytes_received}/{file_size} bytes")
+    return received_data
+
+# ============================================================================
+# END TEMPORARY REPLACEMENT FUNCTIONS
+# ============================================================================
+
+# Load environment variables from .env file (commented out temporarily)
+# load_dotenv()
 
 # Get settings from environment variables
 
-server_ip = os.getenv ("SERVER_IP", "172.31.33.229")
+server_ip = os.getenv ("SERVER_IP", "192.168.1.3")
 server_port = int (os.getenv ("SERVER_PORT", 2222))
 buffer_size = int (os.getenv ("BUFFER_SIZE", 2048))
 chunk_size = int (os.getenv ("CHUNK_SIZE", 1024))

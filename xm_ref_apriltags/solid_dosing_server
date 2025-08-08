@@ -276,12 +276,17 @@ class CameraServer:
         server.setsockopt (socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         try:
-            server.bind((self.server_ip, self.port))
+            self.logger.info(f"Attempting to bind to {self.host}:{self.port}...")
+            server.bind((self.host, self.port))  # Use self.host (0.0.0.0) instead of self.server_ip
+            self.logger.info(f"Successfully bound to {self.host}:{self.port}")
+            
+            self.logger.info("Starting to listen for connections...")
             server.listen(5)
-            self.logger.info(f"Server started on {self.server_ip}:{self.port}.")
+            self.logger.info(f"Server started on {self.host}:{self.port} (accessible via {self.server_ip}:{self.port}).")
             self.logger.info("Waiting for connection...")
 
             while True:
+                self.logger.info("Calling server.accept()...")
                 conn, addr = server.accept()
                 self.logger.info(f"Connected with address: {addr}.")
                 threading.Thread(
@@ -292,6 +297,13 @@ class CameraServer:
 
         except KeyboardInterrupt:
             self.logger.info("Server shutdown requested.")
+        except OSError as e:
+            self.logger.error(f"Socket error: {e}")
+            self.logger.error("This might be a port binding issue or permission problem")
+        except Exception as e:
+            self.logger.error(f"Unexpected server error: {e}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
         finally:
             server.close()
             self.logger.info("Server socket closed.")
