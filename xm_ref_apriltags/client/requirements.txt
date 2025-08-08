@@ -1,0 +1,17 @@
+# Client Requirements for Computer Vision
+# Full dependencies for camera client and AprilTag detection
+
+# Core system dependencies
+PyYAML>=6.0
+
+# Computer vision dependencies (for calibration and AprilTag detection)
+opencv-python>=4.8.0
+numpy>=1.21.0
+matplotlib>=3.5.0
+pupil-apriltags>=1.0.4
+scipy>=1.9.0
+
+# Optional: Enhanced logging
+coloredlogs>=15.0
+
+# Note: Client needs full computer vision stack for AprilTag detection
