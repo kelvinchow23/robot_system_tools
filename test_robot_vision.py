@@ -13,6 +13,7 @@ import subprocess
 import sys
 import os
 from pathlib import Path
+from picam import PiCam, PiCamConfig
 
 def run_command(cmd, description):
     """Run a command and return success status"""
@@ -55,21 +56,48 @@ def check_dependencies():
     return True
 
 def test_camera_connection(hostname=None):
-    """Test camera server connection"""
-    cmd = "python camera_client.py"
-    if hostname:
-        cmd += f" {hostname}"
-    cmd += " --test"
+    """Test camera server connection using PiCam class"""
+    print("🔍 Testing camera server connection...")
     
-    return run_command(cmd, "Testing camera connection")
+    if os.path.exists("camera_config.yaml"):
+        config = PiCamConfig.from_yaml("camera_config.yaml")
+    else:
+        config = PiCamConfig()
+    
+    if hostname:
+        config.hostname = hostname
+    
+    camera = PiCam(config)
+    
+    if camera.test_connection():
+        print(f"✅ Camera server accessible at {config.hostname}:{config.port}")
+        return True
+    else:
+        print(f"❌ Cannot connect to camera server at {config.hostname}:{config.port}")
+        return False
 
-def capture_photo(hostname=None):
-    """Capture a photo from the camera server"""
-    cmd = "python camera_client.py"
-    if hostname:
-        cmd += f" {hostname}"
+def capture_photo_direct(hostname=None):
+    """Capture photo directly using PiCam class"""
+    print("📸 Capturing photo...")
     
-    return run_command(cmd, "Capturing photo")
+    if os.path.exists("camera_config.yaml"):
+        config = PiCamConfig.from_yaml("camera_config.yaml")
+    else:
+        config = PiCamConfig()
+    
+    if hostname:
+        config.hostname = hostname
+    
+    camera = PiCam(config)
+    photo_path = camera.capture_photo()
+    
+    if photo_path:
+        file_size = os.path.getsize(photo_path)
+        print(f"✅ Photo captured: {os.path.basename(photo_path)} ({file_size} bytes)")
+        return True
+    else:
+        print("❌ Failed to capture photo")
+        return False
 
 def detect_apriltags():
     """Detect AprilTags in the latest photo"""
@@ -93,9 +121,9 @@ def robot_vision_workflow(hostname=None):
             print(f"   💡 Check if {hostname} is accessible")
         return False
     
-    # Step 3: Capture photo
+    # Step 3: Capture photo directly
     print(f"\n📸 Step 2: Capture Photo")
-    if not capture_photo(hostname):
+    if not capture_photo_direct(hostname):
         print("   💡 Check camera server and network connection")
         return False
     
