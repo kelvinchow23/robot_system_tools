@@ -1,0 +1,18 @@
+# Robot System Tools - Core Requirements
+# Minimal dependencies for camera system
+
+# Core dependencies
+numpy>=1.21.0
+opencv-python>=4.5.0
+PyYAML>=6.0
+
+# Camera system (Pi only)
+# picamera2  # Install on Pi: pip install picamera2
+
+# Robot Vision (for test_robot_vision.py)
+pupil-apriltags>=1.0.4
+scipy>=1.7.0
+matplotlib>=3.5.0
+
+# Optional for future modules
+# Additional vision libraries can be added here

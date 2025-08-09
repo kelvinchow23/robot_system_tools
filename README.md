@@ -1,13 +1,148 @@
-[![Docker](https://github.com/pairlab/franka_arm_infra/actions/workflows/main.yml/badge.svg)](https://github.com/pairlab/franka_arm_infra/actions/workflows/main.yml)
-## Description 
-This repository contains scripts and off-the-shelf starter scripts for developping and running algorithms for the Franka Emika Panda arms. 
-- In the [docker](docker) folder you can find the docker compose yaml and Dockerfiles to setup the docker environment for the realtime computer and workstation computer interfacing with the Franka arms. [frankapy](https://github.com/iamlab-cmu/frankapy) and [frank-interface](https://github.com/iamlab-cmu/franka-interface) are also compiled in the docker environments and you should be able to use frankapy APIs out of the box through this repo. 
+# Robot System Tools
 
-- In the [robot_toolkit](robot_toolkit) folder you can find the calibration scripts to run robot camera calibration routine(currently) and multi camera calibration routine (soon), find more info [here](robot_toolkit/docs). 
+A modular robotic system toolkit with camera, robot arm, and vision capabilities.
 
-- In the [franka_control_suite](franka_control_suite)(Work in Progress) folder you can find experimental feedback controllers implemented in libfranka.
+## 🎥 Camera System
 
-- In [tests](tests) (Work in Progress) folder we will provide various unit tests and integration test scripts to ensure the software system is working as expected. Including tests for the docker environment, frankapy, robot camera calibration, etc (Work in Progress)
+The camera system provides network-based photo capture for robotic applications.
+
+### Quick Start
+
+#### Option 1: Automated Pi Deployment
+
+1. **Deploy to Pi** (from your PC):
+   ```bash
+   ./deploy_to_pi.sh 192.168.1.100
+   ```
+
+2. **Setup on Pi** (automatically installs everything):
+   ```bash
+   ssh pi@192.168.1.100
+   cd /home/pi/robot_camera
+   ./setup.sh
+   ```
+
+3. **Start camera server**:
+   ```bash
+   # Manual test
+   python camera_server.py
+   
+   # Or as systemd service (auto-starts on boot)
+   sudo systemctl start camera-server
+   ```
+
+#### Option 2: Manual Pi Setup
+
+If you prefer manual setup on the Pi:
+
+```bash
+# On Pi - copy files manually and install
+pip install -r pi_cam_server/requirements.txt
+python pi_cam_server/camera_server.py --port 2222
+```
+
+## 🤖 Robot Vision Workflow
+
+Simple robot vision workflow with separate, focused scripts:
+
+### 1. Capture Photos
+```bash
+# Test camera connection
+python camera_client.py 192.168.1.100 --test
+
+# Capture a photo  
+python camera_client.py 192.168.1.100
+```
+
+### 2. Calibrate Camera (First Time)
+```bash
+# Calibrate camera for accurate AprilTag detection
+python calibrate_camera.py
+```
+
+### 3. Detect AprilTags
+```bash
+# Detect AprilTags in latest photo
+python detect_apriltags.py --latest --show
+
+# Or specify an image file
+python detect_apriltags.py photo.jpg --show
+```
+
+### 4. Complete Workflow Test
+```bash
+# Run the complete workflow (like the original!)
+python test_robot_vision.py 192.168.1.100
+
+# Or run continuously
+python test_robot_vision.py 192.168.1.100 --loop
+```
+
+## 📁 Project Structure
+
+```
+robot_system_tools/
+├── 📄 camera_client.py      # Simple camera capture
+├── 📄 detect_apriltags.py   # Simple AprilTag detection  
+├── 📄 calibrate_camera.py   # Camera calibration
+├── 📄 test_robot_vision.py  # Complete workflow test
+├── 📄 deploy_to_pi.sh       # Pi deployment script
+├── 📁 pi_cam_server/        # Pi deployment package
+├── 📁 src/camera/           # Core camera library
+└── 📁 docker/               # Container configs (future)
+```
+
+### Configuration
+
+Edit `camera_config.yaml` to customize:
+- Network settings (hostname, port)
+- Camera settings (focus, transforms)  
+- File locations
+
+### Python API
+
+```python
+from src.camera import CameraClient, CameraServer
+
+# Client usage
+client = CameraClient()
+photo_path = client.request_photo()
+
+# Server usage (on Pi)
+server = CameraServer()
+server.start_server()
+```
+
+## 🗂️ Project Structure
+
+```
+robot_system_tools/
+├── src/                    # Core modules
+│   └── camera/            # Camera system
+├── camera_server.py       # Pi camera server app
+├── camera_client.py       # PC camera client app  
+├── camera_config.yaml     # Configuration
+├── archive/               # Archived reference code
+└── README.md             # This file
+```
+
+## 🚀 Future Components
+
+- Robot arm control
+- Vision processing (AprilTags, ArUco)
+- Gripper control
+- Motion planning
+- Safety systems
+
+## 📚 Archive
+
+Historical code and experiments are stored in `archive/` for reference.
+
+---
+
+## Original Franka Documentation (Archived)
+
+The following sections contain the original Franka arm infrastructure documentation for reference.
 
 ## Dependancies 
 - docker-compose (version 1 or version 2, use "docker-compose .." or "docker compose .." respectively)

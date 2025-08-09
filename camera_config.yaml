@@ -1,0 +1,35 @@
+# Robot Camera System Configuration
+# Network and camera settings for robot_system_tools
+
+# Network Settings
+network:
+  server_port: 2222
+  buffer_size: 2048
+  chunk_size: 1024
+  hostname: "ur3-picam-apriltag"  # Pi hostname for client connections
+
+# Camera Settings  
+camera:
+  # Focus mode: "auto", "continuous", or "manual"
+  focus_mode: "continuous"
+  # Manual focus position (0-1000, only used if focus_mode is "manual")
+  manual_focus_position: 400
+  # Camera transforms
+  horizontal_flip: true
+  vertical_flip: true
+  # Photo capture settings
+  exposure_settle_time: 3  # seconds to wait for auto-exposure
+
+# File Settings
+files:
+  # Directory for captured photos (relative to script location)
+  photo_directory: "photos"
+  # Photo filename format (timestamp will be added)
+  photo_filename_prefix: "capture"
+  
+# Client Settings
+client:
+  # Directory for downloaded photos
+  download_directory: "downloaded_photos"
+  # Connection timeout in seconds
+  connection_timeout: 10

@@ -1,5 +1,11 @@
+# Archive directory - contains legacy/experimental code
+archive/
+
+# Build directories
 franka_control_suite/build/
 .vscode/
+
+# Calibration data
 #calibration/data/
 # calibration/data/fg/*.csv 
 # calibration/data/fg/*.jpg 

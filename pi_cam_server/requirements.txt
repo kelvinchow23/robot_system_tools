@@ -1,0 +1,12 @@
+# Pi Camera Server Requirements
+# Minimal dependencies for Raspberry Pi deployment
+
+# Core system dependencies
+numpy>=1.21.0
+PyYAML>=6.0
+
+# Pi Camera specific
+picamera2>=0.3.0
+
+# Optional for better performance
+opencv-python-headless>=4.5.0  # Headless version for Pi
