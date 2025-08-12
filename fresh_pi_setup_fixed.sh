@@ -44,6 +44,7 @@ echo "🔧 Step 3: Installing system dependencies..."
 sudo apt install -y python3-pip python3-venv python3-dev git
 sudo apt install -y libcamera-apps libcamera-dev
 sudo apt install -y python3-libcamera python3-kms++
+sudo apt install -y libcap-dev libarchive-dev
 
 echo ""
 echo "📦 Step 4: Cloning repository..."
