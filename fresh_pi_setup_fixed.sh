@@ -47,7 +47,7 @@ sudo apt install -y python3-libcamera python3-kms++
 
 echo ""
 echo "📦 Step 4: Cloning repository..."
-cd /home/pi
+cd $HOME
 if [ -d "robot_system_tools" ]; then
     echo "   Repository already exists, updating..."
     cd robot_system_tools
@@ -79,6 +79,8 @@ mkdir -p photos logs
 
 echo ""
 echo "⚙️  Step 6: Creating systemd service..."
+CURRENT_USER=$(whoami)
+USER_HOME=$(eval echo "~$CURRENT_USER")
 sudo tee /etc/systemd/system/camera-server.service > /dev/null <<EOF
 [Unit]
 Description=Robot Camera Server
@@ -87,11 +89,11 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/robot_system_tools/pi_cam_server
-Environment=PYTHONPATH=/home/pi/robot_system_tools/pi_cam_server
-ExecStart=/home/pi/robot_system_tools/pi_cam_server/venv/bin/python /home/pi/robot_system_tools/pi_cam_server/camera_server.py
+User=$CURRENT_USER
+Group=$CURRENT_USER
+WorkingDirectory=$USER_HOME/robot_system_tools/pi_cam_server
+Environment=PYTHONPATH=$USER_HOME/robot_system_tools/pi_cam_server
+ExecStart=$USER_HOME/robot_system_tools/pi_cam_server/venv/bin/python $USER_HOME/robot_system_tools/pi_cam_server/camera_server.py
 Restart=always
 RestartSec=5
 
