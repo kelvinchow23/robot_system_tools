@@ -1,53 +1,23 @@
-# Robot System Tools
+# Robot Vision System
 
-A modular robotic system toolkit with camera, robot arm, and vision capabilities.
+Simple, focused robot vision toolkit for Raspberry Pi camera and AprilTag detection.
 
-## 🎥 Camera System
+## 🚀 Quick Setup
 
-The camera system provides network-based photo capture for robotic applications.
-
-### Quick Start
-
-#### Option 1: Automated Pi Deployment
-
-1. **Deploy to Pi** (from your PC):
-   ```bash
-   ./deploy_to_pi.sh 192.168.1.100
-   ```
-
-2. **Setup on Pi** (automatically installs everything):
-   ```bash
-   ssh pi@192.168.1.100
-   cd /home/pi/robot_camera
-   ./setup.sh
-   ```
-
-3. **Start camera server**:
-   ```bash
-   # Manual test
-   python camera_server.py
-   
-   # Or as systemd service (auto-starts on boot)
-   sudo systemctl start camera-server
-   ```
-
-#### Option 2: Manual Pi Setup
-
-If you prefer manual setup on the Pi:
-
+### **Fresh Raspberry Pi Setup (One Command)**
 ```bash
-# On Pi - copy files manually and install
-pip install -r pi_cam_server/requirements.txt
-python pi_cam_server/camera_server.py --port 2222
+# On fresh Raspberry Pi OS (Debian Bookworm):
+curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/master/setup_pi_camera.sh | bash
 ```
 
-## 🤖 Robot Vision Workflow
-
-Simple robot vision workflow with separate, focused scripts:
-
-### 1. Capture Photos
+### **Manual Setup**
 ```bash
-# Test camera connection
+# Clone repository and run setup:
+git clone https://github.com/kelvinchow23/robot_system_tools.git
+cd robot_system_tools
+chmod +x setup_pi_camera.sh
+./setup_pi_camera.sh
+```
 python camera_client.py 192.168.1.100 --test
 
 # Capture a photo  
