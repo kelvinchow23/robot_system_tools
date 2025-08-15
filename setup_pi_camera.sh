@@ -3,7 +3,7 @@
 # One-command setup for fresh Raspberry Pi OS (Debian Bookworm)
 # Usage: curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/master/setup_pi_camera.sh | bash
 
-set -e  # Exit on any error
+set -e
 
 echo "🍓 Raspberry Pi Camera Server Setup"
 echo "===================================="
@@ -73,14 +73,10 @@ pip install PyYAML>=6.0 picamera2>=0.3.0 opencv-python-headless>=4.5.0
 mkdir -p photos logs
 
 # Download camera server code
-echo "   Downloading camera server..."
+echo "   Creating camera server..."
 cat > camera_server.py << 'EOF'
 #!/usr/bin/env python3
-"""
-Pi Camera Server - Standalone Application
-Minimal camera server for Raspberry Pi deployment
-"""
-
+"""Pi Camera Server - Standalone Application"""
 import socket
 import threading
 import os
@@ -93,7 +89,6 @@ try:
     from picamera2 import Picamera2
     CAMERA_AVAILABLE = True
 except ImportError:
-    print("❌ picamera2 not available")
     CAMERA_AVAILABLE = False
 
 class CameraConfig:
@@ -101,30 +96,13 @@ class CameraConfig:
         self.server_port = 2222
         self.photo_directory = "photos"
 
-    @classmethod
-    def from_yaml(cls, config_path):
-        config = cls()
-        try:
-            with open(config_path, 'r') as f:
-                data = yaml.safe_load(f)
-                if data:
-                    for key, value in data.items():
-                        if hasattr(config, key):
-                            setattr(config, key, value)
-        except Exception as e:
-            print(f"⚠️  Could not load config: {e}")
-        return config
-
 class CameraServer:
     def __init__(self, config=None):
         self.config = config or CameraConfig()
         self.server_socket = None
         self.running = False
-        
-        # Ensure photo directory exists
         Path(self.config.photo_directory).mkdir(exist_ok=True)
         
-        # Initialize camera
         self.camera = None
         if CAMERA_AVAILABLE:
             try:
@@ -132,9 +110,8 @@ class CameraServer:
                 print("✅ Camera initialized")
             except Exception as e:
                 print(f"❌ Camera initialization failed: {e}")
-                self.camera = None
 
-    def take_photo(self) -> str:
+    def take_photo(self):
         if not self.camera:
             raise Exception("Camera not available")
         
@@ -142,48 +119,34 @@ class CameraServer:
         filename = f"capture_{timestamp}.jpg"
         filepath = Path(self.config.photo_directory) / filename
         
-        try:
-            config = self.camera.create_still_configuration()
-            self.camera.configure(config)
-            self.camera.start()
-            self.camera.capture_file(str(filepath))
-            self.camera.stop()
-            
-            print(f"📸 Photo captured: {filename}")
-            return str(filepath)
-            
-        except Exception as e:
-            print(f"❌ Photo capture failed: {e}")
-            raise
+        config = self.camera.create_still_configuration()
+        self.camera.configure(config)
+        self.camera.start()
+        self.camera.capture_file(str(filepath))
+        self.camera.stop()
+        
+        print(f"📸 Photo captured: {filename}")
+        return str(filepath)
 
     def handle_client(self, client_socket, client_address):
         try:
-            print(f"📱 Client connected: {client_address}")
-            
             command = client_socket.recv(1024).decode().strip()
-            print(f"📋 Command: {command}")
             
             if command == "CAPTURE":
                 try:
                     photo_path = self.take_photo()
-                    
                     with open(photo_path, 'rb') as f:
                         photo_data = f.read()
-                    
                     response = f"OK {len(photo_data)}\n".encode()
                     client_socket.send(response)
                     client_socket.send(photo_data)
-                    print(f"📤 Sent {len(photo_data)} bytes")
-                    
                 except Exception as e:
                     error_msg = f"ERROR {str(e)}\n".encode()
                     client_socket.send(error_msg)
-                    print(f"❌ Error: {e}")
             
             elif command == "TEST":
                 response = "OK Camera server ready\n".encode()
                 client_socket.send(response)
-                print("✅ Test response sent")
             
             else:
                 response = "ERROR Unknown command\n".encode()
@@ -203,7 +166,6 @@ class CameraServer:
             
             self.running = True
             print(f"🎥 Camera server listening on port {self.config.server_port}")
-            print("   Ready for connections...")
             
             while self.running:
                 try:
@@ -214,11 +176,9 @@ class CameraServer:
                     )
                     client_thread.daemon = True
                     client_thread.start()
-                    
                 except Exception as e:
                     if self.running:
                         print(f"❌ Accept error: {e}")
-                        
         except Exception as e:
             print(f"❌ Server start error: {e}")
         finally:
@@ -234,6 +194,8 @@ class CameraServer:
 def main():
     parser = argparse.ArgumentParser(description="Pi Camera Server")
     parser.add_argument("--port", type=int, default=2222, help="Server port")
+    parser.add_argument("--daemon", action="store_true", help="Run as daemon")
+    
     args = parser.parse_args()
     
     config = CameraConfig()
@@ -242,17 +204,11 @@ def main():
     
     server = CameraServer(config)
     
-    print("🎥 Pi Camera Server Starting")
-    print("=" * 30)
-    print(f"📡 Port: {config.server_port}")
-    print(f"📁 Photos: {config.photo_directory}")
-    print("Press Ctrl+C to stop")
-    print()
-    
     try:
         server.start_server()
     except KeyboardInterrupt:
-        print("\n🛑 Server stopped")
+        print("\n🛑 Stopping server...")
+        server.stop_server()
 
 if __name__ == "__main__":
     main()
@@ -262,7 +218,7 @@ chmod +x camera_server.py
 
 echo ""
 echo "⚙️  Creating systemd service..."
-sudo tee /etc/systemd/system/pi-camera-server.service > /dev/null <<EOL
+sudo tee /etc/systemd/system/pi-camera-server.service > /dev/null <<EOF
 [Unit]
 Description=Pi Camera Server
 After=network.target
@@ -272,13 +228,13 @@ Type=simple
 User=$CURRENT_USER
 Group=$CURRENT_USER
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/camera_server.py
+ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/camera_server.py --daemon
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-EOL
+EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable pi-camera-server
@@ -295,7 +251,7 @@ fi
 echo ""
 echo "🚀 Starting camera server..."
 sudo systemctl start pi-camera-server
-sleep 2
+sleep 3
 
 if sudo systemctl is-active --quiet pi-camera-server; then
     echo "   ✅ Camera server started successfully"
@@ -318,8 +274,8 @@ echo "   sudo systemctl status pi-camera-server"
 echo "   sudo systemctl restart pi-camera-server"
 echo "   sudo journalctl -u pi-camera-server -f"
 echo ""
+
 PI_IP=$(hostname -I | awk '{print $1}')
-echo "🌐 Your Pi IP: $PI_IP"
-echo "   Test from PC: telnet $PI_IP 2222"
+echo "🎯 Test from your PC:"
+echo "   python camera_client.py $PI_IP --test"
 echo ""
-echo "🎯 Server is ready for camera capture requests!"
