@@ -42,12 +42,16 @@ sudo apt update -y
 sudo apt upgrade -y
 
 echo ""
-echo "📷 Enabling camera interface..."
+echo "� Installing git first..."
+sudo apt install -y git
+
+echo ""
+echo "�📷 Enabling camera interface..."
 sudo raspi-config nonint do_camera 0
 
 echo ""
-echo "🔧 Installing dependencies..."
-sudo apt install -y python3-pip python3-venv python3-dev git
+echo "🔧 Installing remaining dependencies..."
+sudo apt install -y python3-pip python3-venv python3-dev
 sudo apt install -y libcamera-apps libcamera-dev
 sudo apt install -y python3-libcamera python3-kms++
 sudo apt install -y libcap-dev libarchive-dev
