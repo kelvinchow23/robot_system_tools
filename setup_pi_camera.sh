@@ -1,23 +1,6 @@
 #!/bin/bash
-# Raspberry Pi Camera Server Secho ""
-echo "Updating system packages..."
-sudo apt update -y
-sudo apt upgrade -y
-
-echo ""
-echo "Installing git first..."
-sudo apt install -y git
-
-echo ""
-echo "Enabling camera interface..."
-sudo raspi-config nonint do_camera 0
-
-echo ""
-echo "Installing remaining dependencies..."🔧 Installing git first..."
-sudo apt install -y git
-
-echo ""
-echo "📷 Enabling camera interface..."One-command setup for fresh Raspberry Pi OS (Debian Bookworm)
+# Raspberry Pi Camera Server Setup
+# One-command setup for fresh Raspberry Pi OS (Debian Bookworm)
 # Usage: curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/master/setup_pi_camera.sh | bash
 
 set -e
@@ -28,7 +11,7 @@ echo ""
 
 # Check if running on Raspberry Pi
 if ! grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
-    echo "❌ This script must be run on a Raspberry Pi"
+    echo "This script must be run on a Raspberry Pi"
     exit 1
 fi
 
@@ -54,20 +37,20 @@ USER_HOME=$(eval echo "~$CURRENT_USER")
 INSTALL_DIR="$USER_HOME/pi_camera_server"
 
 echo ""
-echo "🔄 Updating system packages..."
+echo "Updating system packages..."
 sudo apt update -y
 sudo apt upgrade -y
 
 echo ""
-echo "� Installing git first..."
+echo "Installing git first..."
 sudo apt install -y git
 
 echo ""
-echo "�📷 Enabling camera interface..."
+echo "Enabling camera interface..."
 sudo raspi-config nonint do_camera 0
 
 echo ""
-echo "🔧 Installing remaining dependencies..."
+echo "Installing remaining dependencies..."
 sudo apt install -y python3-pip python3-venv python3-dev
 sudo apt install -y libcamera-apps libcamera-dev
 sudo apt install -y python3-libcamera python3-kms++
