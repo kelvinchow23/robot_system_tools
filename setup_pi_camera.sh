@@ -52,7 +52,7 @@ sudo raspi-config nonint do_camera 0
 echo ""
 echo "Installing remaining dependencies..."
 sudo apt install -y python3-pip python3-venv python3-dev
-sudo apt install -y libcamera-apps libcamera-dev
+sudo apt install -y rpicam-apps
 sudo apt install -y python3-libcamera python3-kms++
 sudo apt install -y libcap-dev libarchive-dev
 
@@ -245,7 +245,7 @@ sudo systemctl enable pi-camera-server
 
 echo ""
 echo "Testing camera hardware..."
-if libcamera-hello --list-cameras > /dev/null 2>&1; then
+if rpicam-hello --list-cameras > /dev/null 2>&1; then
     echo "   Camera hardware detected"
 else
     echo "   Camera hardware not detected"

@@ -29,6 +29,13 @@ class SimpleCameraConfig:
         self.focus_mode = "auto"
         self.image_format = "jpeg"
         self.image_quality = 85
+        self.rotation = 0
+        self.resolution = [1920, 1080]
+        self.hflip = False
+        self.vflip = False
+        self.brightness = 0
+        self.contrast = 0
+        self.saturation = 0
 
     @classmethod
     def from_yaml(cls, config_path):
@@ -38,9 +45,30 @@ class SimpleCameraConfig:
             with open(config_path, 'r') as f:
                 data = yaml.safe_load(f)
                 if data:
-                    for key, value in data.items():
-                        if hasattr(config, key):
-                            setattr(config, key, value)
+                    # Load server settings
+                    if 'server' in data:
+                        server = data['server']
+                        config.server_port = server.get('port', config.server_port)
+                        config.photo_directory = server.get('photo_directory', config.photo_directory)
+                    
+                    # Load camera settings
+                    if 'camera' in data:
+                        camera = data['camera']
+                        config.rotation = camera.get('rotation', config.rotation)
+                        config.image_format = camera.get('image_format', config.image_format)
+                        config.image_quality = camera.get('image_quality', config.image_quality)
+                        config.resolution = camera.get('resolution', config.resolution)
+                        config.focus_mode = camera.get('focus_mode', config.focus_mode)
+                    
+                    # Load advanced settings
+                    if 'advanced' in data:
+                        advanced = data['advanced']
+                        config.hflip = advanced.get('hflip', config.hflip)
+                        config.vflip = advanced.get('vflip', config.vflip)
+                        config.brightness = advanced.get('brightness', config.brightness)
+                        config.contrast = advanced.get('contrast', config.contrast)
+                        config.saturation = advanced.get('saturation', config.saturation)
+                        
         except Exception as e:
             print(f"⚠️  Could not load config from {config_path}: {e}")
         return config
@@ -78,16 +106,62 @@ class SimpleCameraServer:
         filepath = Path(self.config.photo_directory) / filename
         
         try:
-            # Start camera preview configuration
-            config = self.camera.create_still_configuration()
+            # Create camera configuration with rotation and settings
+            config = self.camera.create_still_configuration(
+                main={"size": tuple(self.config.resolution)}
+            )
+            
+            # Apply rotation if specified
+            if self.config.rotation != 0:
+                try:
+                    import libcamera
+                    transform = libcamera.Transform()
+                    
+                    # Apply rotation
+                    if self.config.rotation == 90:
+                        transform = libcamera.Transform(hflip=False, vflip=True, transpose=True)
+                    elif self.config.rotation == 180:
+                        transform = libcamera.Transform(hflip=True, vflip=True)
+                    elif self.config.rotation == 270:
+                        transform = libcamera.Transform(hflip=True, vflip=False, transpose=True)
+                    
+                    config["transform"] = transform
+                except ImportError:
+                    print("⚠️  libcamera not available for rotation, using software rotation")
+            
+            # Apply flip settings
+            if self.config.hflip or self.config.vflip:
+                try:
+                    import libcamera
+                    if "transform" not in config:
+                        config["transform"] = libcamera.Transform()
+                    # Note: Additional flip logic would go here if needed
+                except ImportError:
+                    pass
+            
             self.camera.configure(config)
             self.camera.start()
+            
+            # Apply camera controls if available
+            try:
+                controls = {}
+                if hasattr(self.config, 'brightness') and self.config.brightness != 0:
+                    controls["Brightness"] = self.config.brightness / 100.0
+                if hasattr(self.config, 'contrast') and self.config.contrast != 0:
+                    controls["Contrast"] = 1.0 + (self.config.contrast / 100.0)
+                if hasattr(self.config, 'saturation') and self.config.saturation != 0:
+                    controls["Saturation"] = 1.0 + (self.config.saturation / 100.0)
+                
+                if controls:
+                    self.camera.set_controls(controls)
+            except Exception as e:
+                print(f"⚠️  Could not apply camera controls: {e}")
             
             # Capture image
             self.camera.capture_file(str(filepath))
             self.camera.stop()
             
-            print(f"📸 Photo captured: {filename}")
+            print(f"📸 Photo captured: {filename} (rotation: {self.config.rotation}°)")
             return str(filepath)
             
         except Exception as e:
@@ -199,7 +273,8 @@ def load_config():
     config_paths = [
         "camera_config.yaml",
         "../camera_config.yaml",
-        "/etc/camera_server/config.yaml"
+        "/etc/camera_server/config.yaml",
+        "/home/ac/pi_camera_server/camera_config.yaml"
     ]
     
     for config_path in config_paths:

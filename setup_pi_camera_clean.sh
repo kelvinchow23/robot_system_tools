@@ -1,27 +1,27 @@
 #!/bin/bash
 # Raspberry Pi Camera Server Setup
 # One-command setup for fresh Raspberry Pi OS (Debian Bookworm)
-# Usage: curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/master/pi_setup.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/master/setup_pi_camera.sh | bash
 
 set -e
 
-echo "Raspberry Pi Camera Server Setup"
+echo "🍓 Raspberry Pi Camera Server Setup"
 echo "===================================="
 echo ""
 
 # Check if running on Raspberry Pi
 if ! grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
-    echo "This script must be run on a Raspberry Pi"
+    echo "❌ This script must be run on a Raspberry Pi"
     exit 1
 fi
 
 echo "This script will:"
-echo "  - Update system packages"
-echo "  - Enable camera interface"
-echo "  - Install dependencies"
-echo "  - Download camera server code"
-echo "  - Setup systemd service"
-echo "  - Test camera functionality"
+echo "  • Update system packages"
+echo "  • Enable camera interface"
+echo "  • Install dependencies"
+echo "  • Download camera server code"
+echo "  • Setup systemd service"
+echo "  • Test camera functionality"
 echo ""
 
 read -p "Continue? (y/n): " -n 1 -r
@@ -37,27 +37,23 @@ USER_HOME=$(eval echo "~$CURRENT_USER")
 INSTALL_DIR="$USER_HOME/pi_camera_server"
 
 echo ""
-echo "Updating system packages..."
+echo "🔄 Updating system packages..."
 sudo apt update -y
 sudo apt upgrade -y
 
 echo ""
-echo "Installing git first..."
-sudo apt install -y git
-
-echo ""
-echo "Enabling camera interface..."
+echo "📷 Enabling camera interface..."
 sudo raspi-config nonint do_camera 0
 
 echo ""
-echo "Installing remaining dependencies..."
-sudo apt install -y python3-pip python3-venv python3-dev
-sudo apt install -y rpicam-apps
+echo "🔧 Installing dependencies..."
+sudo apt install -y python3-pip python3-venv python3-dev git
+sudo apt install -y libcamera-apps libcamera-dev
 sudo apt install -y python3-libcamera python3-kms++
 sudo apt install -y libcap-dev libarchive-dev
 
 echo ""
-echo "Setting up camera server..."
+echo "📦 Setting up camera server..."
 
 # Create installation directory
 mkdir -p "$INSTALL_DIR"
@@ -111,9 +107,9 @@ class CameraServer:
         if CAMERA_AVAILABLE:
             try:
                 self.camera = Picamera2()
-                print("Camera initialized")
+                print("✅ Camera initialized")
             except Exception as e:
-                print(f"Camera initialization failed: {e}")
+                print(f"❌ Camera initialization failed: {e}")
 
     def take_photo(self):
         if not self.camera:
@@ -129,7 +125,7 @@ class CameraServer:
         self.camera.capture_file(str(filepath))
         self.camera.stop()
         
-        print(f"Photo captured: {filename}")
+        print(f"📸 Photo captured: {filename}")
         return str(filepath)
 
     def handle_client(self, client_socket, client_address):
@@ -157,7 +153,7 @@ class CameraServer:
                 client_socket.send(response)
                 
         except Exception as e:
-            print(f"Client handling error: {e}")
+            print(f"❌ Client handling error: {e}")
         finally:
             client_socket.close()
 
@@ -169,7 +165,7 @@ class CameraServer:
             self.server_socket.listen(5)
             
             self.running = True
-            print(f"Camera server listening on port {self.config.server_port}")
+            print(f"🎥 Camera server listening on port {self.config.server_port}")
             
             while self.running:
                 try:
@@ -182,9 +178,9 @@ class CameraServer:
                     client_thread.start()
                 except Exception as e:
                     if self.running:
-                        print(f"Accept error: {e}")
+                        print(f"❌ Accept error: {e}")
         except Exception as e:
-            print(f"Server start error: {e}")
+            print(f"❌ Server start error: {e}")
         finally:
             self.stop_server()
 
@@ -211,7 +207,7 @@ def main():
     try:
         server.start_server()
     except KeyboardInterrupt:
-        print("\nStopping server...")
+        print("\n🛑 Stopping server...")
         server.stop_server()
 
 if __name__ == "__main__":
@@ -221,7 +217,7 @@ EOF
 chmod +x camera_server.py
 
 echo ""
-echo "Creating systemd service..."
+echo "⚙️  Creating systemd service..."
 sudo tee /etc/systemd/system/pi-camera-server.service > /dev/null <<EOF
 [Unit]
 Description=Pi Camera Server
@@ -244,42 +240,42 @@ sudo systemctl daemon-reload
 sudo systemctl enable pi-camera-server
 
 echo ""
-echo "Testing camera hardware..."
-if rpicam-hello --list-cameras > /dev/null 2>&1; then
-    echo "   Camera hardware detected"
+echo "🧪 Testing camera hardware..."
+if libcamera-hello --list-cameras > /dev/null 2>&1; then
+    echo "   ✅ Camera hardware detected"
 else
-    echo "   Camera hardware not detected"
+    echo "   ❌ Camera hardware not detected"
     echo "   Make sure camera is connected and enabled"
 fi
 
 echo ""
-echo "Starting camera server..."
+echo "🚀 Starting camera server..."
 sudo systemctl start pi-camera-server
 sleep 3
 
 if sudo systemctl is-active --quiet pi-camera-server; then
-    echo "   Camera server started successfully"
+    echo "   ✅ Camera server started successfully"
 else
-    echo "   Camera server failed to start"
+    echo "   ❌ Camera server failed to start"
     echo "   Check logs: sudo journalctl -u pi-camera-server -n 10"
 fi
 
 echo ""
-echo "Setup Complete!"
+echo "✅ Setup Complete!"
 echo "=================="
 echo ""
-echo "Installation summary:"
-echo "   Install directory: $INSTALL_DIR"
-echo "   Service name: pi-camera-server"
-echo "   Default port: 2222"
+echo "📋 Installation summary:"
+echo "   📁 Install directory: $INSTALL_DIR"
+echo "   🎥 Service name: pi-camera-server"
+echo "   📡 Default port: 2222"
 echo ""
-echo "Useful commands:"
+echo "🔧 Useful commands:"
 echo "   sudo systemctl status pi-camera-server"
 echo "   sudo systemctl restart pi-camera-server"
 echo "   sudo journalctl -u pi-camera-server -f"
 echo ""
 
 PI_IP=$(hostname -I | awk '{print $1}')
-echo "Test from your PC:"
+echo "🎯 Test from your PC:"
 echo "   python camera_client.py $PI_IP --test"
 echo ""
