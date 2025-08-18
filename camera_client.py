@@ -2,6 +2,10 @@
 """
 Camera Client for Pi Camera Server
 Connects to the camera server running on Raspberry Pi
+
+⚠️  DEPRECATED: Use the PiCam class from picam.py instead
+   from picam import PiCam, PiCamConfig
+   camera = PiCam(PiCamConfig("your-pi-ip"))
 """
 import socket
 import argparse

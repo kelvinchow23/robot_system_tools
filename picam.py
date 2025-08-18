@@ -12,7 +12,7 @@ from typing import Optional, Dict, Any
 
 class PiCamConfig:
     """Simple camera configuration"""
-    def __init__(self, hostname="ur3-picam-apriltag", port=2222, download_dir="photos"):
+    def __init__(self, hostname="raspberrypi.local", port=2222, download_dir="photos"):
         self.hostname = hostname
         self.port = port
         self.download_dir = download_dir
@@ -22,7 +22,7 @@ class PiCamConfig:
         Path(self.download_dir).mkdir(exist_ok=True)
     
     @classmethod
-    def from_yaml(cls, config_path: str):
+    def from_yaml(cls, config_path: str = "pi_cam_server/camera_config.yaml"):
         """Load config from YAML file"""
         if not os.path.exists(config_path):
             return cls()
@@ -30,10 +30,13 @@ class PiCamConfig:
         with open(config_path, 'r') as f:
             data = yaml.safe_load(f)
         
+        # Extract server config
+        server_config = data.get('server', {})
+        
         return cls(
-            hostname=data.get('hostname', 'ur3-picam-apriltag'),
-            port=data.get('server_port', 2222),
-            download_dir=data.get('photo_directory', 'photos')
+            hostname=server_config.get('host', 'raspberrypi.local'),
+            port=server_config.get('port', 2222),
+            download_dir=data.get('photos', {}).get('directory', 'photos')
         )
 
 class PiCam:
@@ -138,13 +141,13 @@ class PiCam:
         return str(latest)
 
 # Convenience functions for quick usage
-def capture_photo(hostname: str = "ur3-picam-apriltag", port: int = 2222) -> Optional[str]:
+def capture_photo(hostname: str = "raspberrypi.local", port: int = 2222) -> Optional[str]:
     """Quick photo capture function"""
     config = PiCamConfig(hostname, port)
     camera = PiCam(config)
     return camera.capture_photo()
 
-def test_camera(hostname: str = "ur3-picam-apriltag", port: int = 2222) -> bool:
+def test_camera(hostname: str = "raspberrypi.local", port: int = 2222) -> bool:
     """Quick connection test function"""
     config = PiCamConfig(hostname, port)
     camera = PiCam(config)

@@ -1,12 +1,12 @@
-# Pi Camera Server Requirements
-# Minimal dependencies for Raspberry Pi deployment
+# Pi Camera Server - System Package Dependencies
+# This file is for reference only - packages are installed via apt
 
-# Core system dependencies
-numpy>=1.21.0
-PyYAML>=6.0
+# System packages installed by setup.sh:
+# - python3-numpy (provides numpy)
+# - python3-yaml (provides PyYAML) 
+# - python3-picamera2 (provides picamera2)
+# - python3-opencv (provides cv2, optional)
+# - python3-libcamera (camera interface)
+# - libcamera-apps (camera tools)
 
-# Pi Camera specific
-picamera2>=0.3.0
-
-# Optional for better performance
-opencv-python-headless>=4.5.0  # Headless version for Pi
+# No pip dependencies needed!

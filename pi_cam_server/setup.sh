@@ -1,11 +1,11 @@
 #!/bin/bash
 # Pi Camera Server Setup Script
-# Run this script on Raspberry Pi to setup camera server
+# Simple setup using system packages only - no virtual environments!
 
 set -e  # Exit on any error
 
-echo "🍓 Setting up Pi Camera Server"
-echo "================================"
+echo "🍓 Pi Camera Server Setup (System Packages Only)"
+echo "================================================="
 
 # Check if running on Pi
 if ! grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
@@ -18,49 +18,45 @@ if ! grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
     fi
 fi
 
+# Get the directory where this script is located (should be the git repo)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+echo "📂 Working from git repo: $REPO_DIR"
+echo ""
+
 # Update system
 echo "📦 Updating system packages..."
 sudo apt update
 sudo apt upgrade -y
 
-# Install system dependencies
+# Install system dependencies (no pip, no venv!)
 echo "🔧 Installing system dependencies..."
-sudo apt install -y python3-pip python3-venv python3-dev
-sudo apt install -y libcamera-apps libcamera-dev
+sudo apt install -y python3 python3-dev
+sudo apt install -y libcamera-apps libcamera-dev  
 sudo apt install -y python3-libcamera python3-kms++
+sudo apt install -y python3-numpy python3-yaml
+sudo apt install -y python3-picamera2
 
-# Create virtual environment
-echo "🐍 Setting up Python virtual environment..."
-python3 -m venv venv
-source venv/bin/activate
+# Optional: Install opencv from system packages if available
+echo "� Installing OpenCV (optional)..."
+sudo apt install -y python3-opencv || echo "⚠️  OpenCV not available in repos, skipping..."
 
-# Upgrade pip
-pip install --upgrade pip
+# Create photos directory in repo
+mkdir -p "$SCRIPT_DIR/photos"
 
-# Install Python dependencies
-echo "📦 Installing Python packages..."
-pip install -r requirements.txt
+# Enable camera
+echo "📷 Enabling camera interface..."
+sudo raspi-config nonint do_camera 0
 
-# Copy source files from parent directory
-echo "📋 Copying source files..."
-if [ -d "../src" ]; then
-    cp -r ../src .
-    echo "✅ Source files copied"
-else
-    echo "⚠️  Source directory not found at ../src"
-    echo "   Make sure you're running this from the pi_cam_server directory"
-fi
+# Make camera server executable
+chmod +x "$SCRIPT_DIR/camera_server.py"
 
-# Copy config if it exists
-if [ -f "../camera_config.yaml" ]; then
-    cp ../camera_config.yaml .
-    echo "✅ Configuration copied"
-fi
+# Get current user for systemd service
+CURRENT_USER=$(whoami)
+CURRENT_GROUP=$(id -gn)
 
-# Create project directories
-mkdir -p photos logs
-
-# Create systemd service
+# Create systemd service (runs directly from git repo)
 echo "⚙️  Creating systemd service..."
 sudo tee /etc/systemd/system/camera-server.service > /dev/null <<EOF
 [Unit]
@@ -70,11 +66,10 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/robot_camera
-Environment=PYTHONPATH=/home/pi/robot_camera
-ExecStart=/home/pi/robot_camera/venv/bin/python /home/pi/robot_camera/camera_server.py --daemon
+User=$CURRENT_USER
+Group=$CURRENT_GROUP
+WorkingDirectory=$SCRIPT_DIR
+ExecStart=/usr/bin/python3 $SCRIPT_DIR/camera_server.py
 Restart=always
 RestartSec=5
 
@@ -82,36 +77,35 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-# Enable camera
-echo "📷 Enabling camera interface..."
-sudo raspi-config nonint do_camera 0
+# Reload systemd and enable service
+sudo systemctl daemon-reload
+sudo systemctl enable camera-server
 
 # Set hostname (optional)
-read -p "🏷️  Set hostname to 'ur3-picam-apriltag'? (y/n): " -n 1 -r
+read -p "🏷️  Set hostname to 'picam-server'? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "ur3-picam-apriltag" | sudo tee /etc/hostname
-    sudo sed -i 's/127.0.1.1.*/127.0.1.1\tur3-picam-apriltag/' /etc/hosts
-    echo "✅ Hostname set to ur3-picam-apriltag"
+    echo "picam-server" | sudo tee /etc/hostname
+    sudo sed -i 's/127.0.1.1.*/127.0.1.1\tpicam-server/' /etc/hosts
+    echo "✅ Hostname set to picam-server"
 fi
-
-# Create photos directory
-mkdir -p photos
-
-# Set permissions
-chmod +x camera_server.py
 
 echo ""
 echo "✅ Pi Camera Server setup complete!"
 echo ""
+echo "📂 Server running from: $SCRIPT_DIR"
+echo "📷 Photos saved to: $SCRIPT_DIR/photos"
+echo ""
 echo "📋 Next steps:"
 echo "   1. Reboot Pi: sudo reboot"
-echo "   2. Test camera: python camera_server.py"
-echo "   3. Enable service: sudo systemctl enable camera-server"
-echo "   4. Start service: sudo systemctl start camera-server"
+echo "   2. Test camera: cd $SCRIPT_DIR && python3 camera_server.py"
+echo "   3. Start service: sudo systemctl start camera-server"
 echo ""
 echo "🔧 Service management:"
 echo "   Status: sudo systemctl status camera-server"
 echo "   Logs:   sudo journalctl -u camera-server -f"
 echo "   Stop:   sudo systemctl stop camera-server"
+echo ""
+echo "🔗 Access from client:"
+echo "   python3 camera_client.py <PI_IP>"
 echo ""

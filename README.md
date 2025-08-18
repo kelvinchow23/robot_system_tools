@@ -1,34 +1,64 @@
 # Robot Camera System
 
-Simple Raspberry Pi camera server for robot vision applications.
+Simple Raspberry Pi camera server for robot vision applications using system packages only.
 
 ## 🚀 Quick Setup
 
-### For Fresh Raspberry Pi (Debian Bookworm)
+### One-Command Install (Fresh Raspberry Pi)
 
-Run this single command on your fresh Pi:
+For a fresh Debian Bookworm image, run this single command:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/master/setup_pi_camera.sh | bash
+curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/master/pi_cam_server/install.sh | bash
 ```
 
-That's it! The script will:
-- Install all dependencies
+This will:
+- Install git if needed
+- Clone the repository to `~/robot_system_tools` (works with any user)
+- Install system dependencies (no pip/venv) 
 - Enable camera interface
-- Setup Python environment
-- Install and start camera server
-- Configure auto-start service
+- Setup systemd service for current user
+- Configure auto-start on boot
 
-### Manual Setup (if preferred)
+### Manual Install (if preferred)
 
 ```bash
-# 1. Clone repository
+# Clone repository
 git clone https://github.com/kelvinchow23/robot_system_tools.git
-cd robot_system_tools
+cd robot_system_tools/pi_cam_server
 
-# 2. Run setup script
-chmod +x setup_pi_camera.sh
-./setup_pi_camera.sh
+# Run setup
+chmod +x setup.sh
+./setup.sh
+```
+
+## 📋 After Installation
+
+### Testing the Server
+```bash
+# Test manually (on Pi)
+cd ~/robot_system_tools/pi_cam_server
+python3 camera_server.py
+
+# Test from client computer
+python3 test_client.py <PI_IP>
+
+# Or use the PiCam class
+python3 -c "from picam import test_camera; print('✅ Connected' if test_camera('<PI_IP>') else '❌ Failed')"
+```
+
+### Service Management  
+```bash
+# Check status
+sudo systemctl status camera-server
+
+# View logs
+sudo journalctl -u camera-server -f
+
+# Start/stop/restart
+sudo systemctl start camera-server
+sudo systemctl stop camera-server  
+sudo systemctl restart camera-server
 ```
 
 ## 📋 What You Get
@@ -37,12 +67,30 @@ chmod +x setup_pi_camera.sh
 - Standalone camera server for Raspberry Pi
 - Runs on port 2222 by default
 - Auto-starts on boot via systemd
-- Handles photo capture requests over network
+- Uses system packages only (no virtual environments)
+- Photos saved to `pi_cam_server/photos/`
 
 ### Client Tools
-- `camera_client.py` - Basic camera client
-- `picam.py` - Simple camera class for other scripts
-- `test_robot_vision.py` - Complete workflow test
+- `picam.py` - Simple PiCam class for easy camera operations
+- `camera_client.py` - Lower-level camera client (use PiCam instead)
+- `test_client.py` - Simple connection test
+- `test_robot_vision.py` - Complete workflow test using PiCam
+
+### Using the PiCam Class
+```python
+from picam import PiCam, PiCamConfig
+
+# Simple usage
+camera = PiCam()
+if camera.test_connection():
+    photo_path = camera.capture_photo()
+    print(f"Photo saved: {photo_path}")
+
+# With custom config
+config = PiCamConfig(hostname="your-pi-ip", port=2222)
+camera = PiCam(config)
+photo_path = camera.capture_photo("my_photo.jpg")
+```
 - `detect_apriltags.py` - AprilTag detection
 - `calibrate_camera.py` - Camera calibration
 

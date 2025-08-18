@@ -2,16 +2,17 @@
 """
 Robot Vision Workflow Test
 Simple test script that demonstrates the complete robot vision workflow:
-1. Capture photo from Pi camera
+1. Capture photo from Pi camera server
 2. Detect AprilTags  
 3. Show results
 
-This is the simple workflow script you wanted - just like before!
+This tests the picam.py -> pi_cam_server workflow
 """
 
 import subprocess
 import sys
 import os
+import argparse
 from pathlib import Path
 from picam import PiCam, PiCamConfig
 
@@ -55,58 +56,49 @@ def check_dependencies():
     
     return True
 
-def test_camera_connection(hostname=None):
-    """Test camera server connection using PiCam class"""
+def test_camera_connection(pi_ip, port=2222):
+    """Test camera server connection using PiCam"""
     print("🔍 Testing camera server connection...")
     
-    if os.path.exists("camera_config.yaml"):
-        config = PiCamConfig.from_yaml("camera_config.yaml")
-    else:
-        config = PiCamConfig()
-    
-    if hostname:
-        config.hostname = hostname
-    
+    config = PiCamConfig(hostname=pi_ip, port=port)
     camera = PiCam(config)
     
     if camera.test_connection():
-        print(f"✅ Camera server accessible at {config.hostname}:{config.port}")
+        print(f"✅ Camera server accessible at {pi_ip}:{port}")
         return True
     else:
-        print(f"❌ Cannot connect to camera server at {config.hostname}:{config.port}")
+        print(f"❌ Cannot connect to camera server at {pi_ip}:{port}")
         return False
 
-def capture_photo_direct(hostname=None):
-    """Capture photo directly using PiCam class"""
+def capture_photo_direct(pi_ip, port=2222):
+    """Capture photo using PiCam"""
     print("📸 Capturing photo...")
     
-    if os.path.exists("camera_config.yaml"):
-        config = PiCamConfig.from_yaml("camera_config.yaml")
-    else:
-        config = PiCamConfig()
-    
-    if hostname:
-        config.hostname = hostname
-    
+    config = PiCamConfig(hostname=pi_ip, port=port)
     camera = PiCam(config)
-    photo_path = camera.capture_photo()
     
-    if photo_path:
+    photo_path = camera.capture_photo("test_photo.jpg")
+    if photo_path and os.path.exists(photo_path):
         file_size = os.path.getsize(photo_path)
-        print(f"✅ Photo captured: {os.path.basename(photo_path)} ({file_size} bytes)")
+        print(f"✅ Photo captured: {photo_path} ({file_size} bytes)")
         return True
-    else:
-        print("❌ Failed to capture photo")
-        return False
+    
+    print("❌ Failed to capture photo")
+    return False
 
 def detect_apriltags():
     """Detect AprilTags in the latest photo"""
     return run_command("python detect_apriltags.py --latest --show", "Detecting AprilTags")
 
-def robot_vision_workflow(hostname=None):
+def robot_vision_workflow(pi_ip=None):
     """Run the complete robot vision workflow"""
     print("🤖 Robot Vision Workflow Test")
     print("=" * 50)
+    
+    if not pi_ip:
+        pi_ip = input("Enter Pi IP address (or press Enter for localhost): ").strip()
+        if not pi_ip:
+            pi_ip = "localhost"
     
     # Step 1: Check dependencies
     if not check_dependencies():
@@ -115,15 +107,14 @@ def robot_vision_workflow(hostname=None):
     
     # Step 2: Test camera connection
     print(f"\n📡 Step 1: Test Camera Connection")
-    if not test_camera_connection(hostname):
+    if not test_camera_connection(pi_ip):
         print("   💡 Make sure Pi camera server is running")
-        if hostname:
-            print(f"   💡 Check if {hostname} is accessible")
+        print(f"   💡 Check if {pi_ip} is accessible")
         return False
     
     # Step 3: Capture photo directly
     print(f"\n📸 Step 2: Capture Photo")
-    if not capture_photo_direct(hostname):
+    if not capture_photo_direct(pi_ip):
         print("   💡 Check camera server and network connection")
         return False
     
@@ -135,7 +126,7 @@ def robot_vision_workflow(hostname=None):
         return False
     
     print(f"\n✅ Robot Vision Workflow Complete!")
-    print("   📸 Photo captured from Pi camera")
+    print("   📸 Photo captured from Pi camera server")
     print("   🎯 AprilTags detected and annotated")
     print("   📊 Results displayed")
     
