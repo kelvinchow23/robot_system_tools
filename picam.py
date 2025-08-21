@@ -7,6 +7,7 @@ Focused camera functionality for robot vision scripts
 import socket
 import os
 import yaml
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -22,9 +23,10 @@ class PiCamConfig:
         Path(self.download_dir).mkdir(exist_ok=True)
     
     @classmethod
-    def from_yaml(cls, config_path: str = "pi_cam_server/camera_config.yaml"):
-        """Load config from YAML file"""
+    def from_yaml(cls, config_path: str = "client_config.yaml"):
+        """Load config from client YAML file"""
         if not os.path.exists(config_path):
+            print(f"⚠️  Config file {config_path} not found, using defaults")
             return cls()
         
         with open(config_path, 'r') as f:
@@ -32,11 +34,12 @@ class PiCamConfig:
         
         # Extract server config
         server_config = data.get('server', {})
+        client_config = data.get('client', {})
         
         return cls(
             hostname=server_config.get('host', 'raspberrypi.local'),
             port=server_config.get('port', 2222),
-            download_dir=data.get('photos', {}).get('directory', 'photos')
+            download_dir=client_config.get('download_directory', 'photos')
         )
 
 class PiCam:
@@ -64,6 +67,24 @@ class PiCam:
         except Exception:
             return False
     
+    def get_status(self) -> str:
+        """Get detailed camera server status"""
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(self.config.timeout)
+            sock.connect((self.config.hostname, self.config.port))
+            
+            # Send status command
+            sock.send("STATUS".encode('utf-8'))
+            
+            # Receive response
+            response = sock.recv(1024).decode().strip()
+            sock.close()
+            return response
+            
+        except Exception as e:
+            return f"Connection failed: {e}"
+    
     def capture_photo(self, filename: Optional[str] = None) -> Optional[str]:
         """
         Capture a photo from Pi camera server
@@ -80,34 +101,44 @@ class PiCam:
             sock.settimeout(self.config.timeout)
             sock.connect((self.config.hostname, self.config.port))
             
-            # Send photo request
-            sock.send("TAKE_PHOTO".encode('utf-8'))
+            # Send capture command
+            sock.send("CAPTURE".encode('utf-8'))
             
-            # Receive filename
-            filename_length = int.from_bytes(sock.recv(4), byteorder='big')
-            received_filename = sock.recv(filename_length).decode('utf-8')
+            # Receive response header (read until newline)
+            response_bytes = b""
+            while b"\n" not in response_bytes:
+                chunk = sock.recv(1)
+                if not chunk:
+                    break
+                response_bytes += chunk
             
-            # Send filename confirmation
-            sock.send(len(received_filename).to_bytes(4, byteorder='big'))
-            sock.send(received_filename.encode('utf-8'))
+            response = response_bytes.decode('utf-8').strip()
+            if not response.startswith("OK"):
+                print(f"Server error: {response}")
+                sock.close()
+                return None
             
-            # Receive file size
-            file_size = int.from_bytes(sock.recv(8), byteorder='big')
+            # Parse data length from response "OK {length}"
+            try:
+                data_length = int(response.split()[1])
+            except (IndexError, ValueError):
+                print("Invalid server response format")
+                sock.close()
+                return None
             
-            # Send file size confirmation
-            sock.send(file_size.to_bytes(8, byteorder='big'))
-            
-            # Receive file data
+            # Generate filename if not provided
             if filename:
                 file_path = Path(self.config.download_dir) / filename
             else:
-                file_path = Path(self.config.download_dir) / received_filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                file_path = Path(self.config.download_dir) / f"capture_{timestamp}.jpg"
             
+            # Receive photo data
             received_size = 0
             with open(file_path, 'wb') as f:
-                while received_size < file_size:
-                    remaining = file_size - received_size
-                    chunk_size = min(2048, remaining)
+                while received_size < data_length:
+                    remaining = data_length - received_size
+                    chunk_size = min(4096, remaining)
                     chunk = sock.recv(chunk_size)
                     
                     if not chunk:
@@ -118,9 +149,10 @@ class PiCam:
             
             sock.close()
             
-            if received_size == file_size:
+            if received_size == data_length:
                 return str(file_path)
             else:
+                print(f"Incomplete download: {received_size}/{data_length} bytes")
                 return None
                 
         except Exception as e:

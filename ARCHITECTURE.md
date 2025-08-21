@@ -94,7 +94,7 @@ if camera.test_connection():
    photo = camera.capture_photo()
    
    # Or with custom config
-   config = PiCamConfig(hostname="192.168.1.100", port=8000)
+   config = PiCamConfig(hostname="your-pi-ip", port=2222)
    camera = PiCam(config)
    photo = camera.capture_photo()
    ```

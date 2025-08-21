@@ -1,0 +1,18 @@
+# Client Configuration for Pi Camera
+# Add your Pi camera server details here
+
+# Pi Camera Server Details
+server:
+  host: "192.168.1.3"  # Replace with your Pi's IP address (e.g., "192.168.1.100" or "picam.local")
+  port: 2222
+
+# Local settings
+client:
+  download_directory: "photos"  # Where to save captured photos
+  timeout: 10  # Connection timeout in seconds
+
+# Example Pi addresses (uncomment and modify as needed):
+# server:
+#   host: "192.168.1.100"    # Static IP
+#   host: "picam.local"      # If you set hostname to picam-server
+#   host: "raspberrypi.local" # Default Pi hostname

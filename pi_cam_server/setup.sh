@@ -81,6 +81,20 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable camera-server
 
+# Start the service immediately
+echo "🚀 Starting camera server service..."
+sudo systemctl start camera-server
+
+# Check if service started successfully
+sleep 2
+if sudo systemctl is-active --quiet camera-server; then
+    echo "✅ Camera server service started successfully"
+    echo "📡 Service will auto-start on boot"
+else
+    echo "⚠️  Service created but failed to start"
+    echo "   You can start it manually after reboot"
+fi
+
 # Set hostname (optional)
 read -p "🏷️  Set hostname to 'picam-server'? (y/n): " -n 1 -r
 echo
@@ -95,16 +109,22 @@ echo "✅ Pi Camera Server setup complete!"
 echo ""
 echo "📂 Server running from: $SCRIPT_DIR"
 echo "📷 Photos saved to: $SCRIPT_DIR/photos"
+echo "🚀 Service enabled for auto-start on boot"
 echo ""
-echo "📋 Next steps:"
-echo "   1. Reboot Pi: sudo reboot"
-echo "   2. Test camera: cd $SCRIPT_DIR && python3 camera_server.py"
-echo "   3. Start service: sudo systemctl start camera-server"
+echo "📋 Camera server is now running and will:"
+echo "   ✅ Start automatically when Pi boots"
+echo "   ✅ Restart automatically if it crashes"
+echo "   ✅ Listen on port 2222 for connections"
 echo ""
-echo "🔧 Service management:"
+echo "🔧 Service management commands:"
 echo "   Status: sudo systemctl status camera-server"
 echo "   Logs:   sudo journalctl -u camera-server -f"
 echo "   Stop:   sudo systemctl stop camera-server"
+echo "   Start:  sudo systemctl start camera-server"
+echo "   Restart: sudo systemctl restart camera-server"
+echo ""
+echo "🧪 Test from client computer:"
+echo "   python3 test_client.py $(hostname -I | awk '{print $1}')"
 echo ""
 echo "🔗 Access from client:"
 echo "   python3 camera_client.py <PI_IP>"

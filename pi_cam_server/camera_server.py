@@ -88,13 +88,26 @@ class SimpleCameraServer:
         self.camera = None
         if CAMERA_AVAILABLE:
             try:
+                print("🔍 Initializing camera...")
                 self.camera = Picamera2()
-                print("✅ Camera initialized")
+                
+                # Test camera with basic configuration
+                config = self.camera.create_still_configuration()
+                self.camera.configure(config)
+                print("✅ Camera initialized successfully")
+                
             except Exception as e:
                 print(f"❌ Camera initialization failed: {e}")
+                print("💡 Troubleshooting tips:")
+                print("   1. Check camera is enabled: sudo raspi-config → Interface Options → Camera → Enable")
+                print("   2. Check camera connection (ribbon cable)")
+                print("   3. Reboot Pi: sudo reboot")
+                print("   4. Check no other process using camera: sudo fuser /dev/video*")
+                print("   5. Test camera manually: rpicam-still -o test.jpg")
                 self.camera = None
         else:
-            print("❌ Camera not available")
+            print("❌ picamera2 not available")
+            print("💡 Install with: sudo apt install python3-picamera2")
 
     def take_photo(self) -> str:
         """Take a photo and return the filename"""
