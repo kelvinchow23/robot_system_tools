@@ -301,9 +301,9 @@ class SimpleCameraServer:
         if self.camera:
             self.camera.close()
         
-        # Restore LED defaults
+        # Turn off status LED to clearly indicate server is stopped
         if self.led_controller:
-            self.led_controller.restore_default()
+            self.led_controller.indicate_server_stopped()
             
         print("🛑 Camera server stopped")
 

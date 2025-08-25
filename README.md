@@ -107,12 +107,14 @@ The camera server uses onboard LEDs to show status:
   - Blinking: Server starting up
   - Steady: Server running normally  
   - Brief flash: Photo being captured
+  - **OFF**: Server stopped/not running
 - **Error indication**: Uses available LED (mmc0 or default-on)
   - Blinking pattern indicates server errors
 
 **Pi 5:**
 - **🟢 Green LED (ACT)**: Server status  
 - **🔴 Red LED (PWR)**: Error indication
+- **OFF**: Server stopped/not running
 
 Check available LEDs on your Pi:
 ```bash

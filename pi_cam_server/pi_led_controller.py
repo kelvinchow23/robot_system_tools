@@ -153,24 +153,37 @@ class PiLEDController:
         time.sleep(0.1)
         self.set_status_led('on')
     
+    def indicate_server_stopped(self):
+        """LED pattern for server stopped - turn off status LED"""
+        print("💡 LED: Server stopped (status LED off)")
+        self.set_status_led('off')
+        # Keep other LEDs in their normal state
+    
     def restore_default(self):
-        """Restore LEDs to default system behavior"""
-        print("💡 LED: Restoring default behavior")
+        """Turn off status LED and restore other LEDs to default system behavior"""
+        print("💡 LED: Turning off status LED and restoring defaults")
+        
+        # Turn off the status LED completely when server stops
+        if self.status_led:
+            self._write_led(self.status_led, 0)  # Turn off
+            print(f"💡 LED: Turned off {self.status_led} (server stopped)")
+        
+        # Restore other LEDs to their default behavior (but leave status LED off)
         for led_name in self.available_leds:
+            # Skip the status LED - we want it to stay off
+            if led_name == self.status_led:
+                continue
+                
             try:
                 trigger_path = self.available_leds[led_name] / 'trigger'
                 with open(trigger_path, 'w') as f:
                     # Restore appropriate default triggers based on LED name
-                    if led_name in ['ACT', 'act', 'led0']:
-                        f.write('actpwr')  # Pi Zero 2W uses actpwr for activity
-                    elif led_name in ['PWR', 'pwr', 'led1']:
-                        f.write('input')  # Default power trigger
-                    elif led_name == 'mmc0':
+                    if led_name == 'mmc0':
                         f.write('mmc0')  # SD card activity
                     elif led_name == 'default-on':
                         f.write('default-on')  # Always on power indicator
                     else:
-                        f.write('none')  # Safe default
+                        f.write('none')  # Safe default for other LEDs
             except (OSError, IOError, PermissionError):
                 pass
     
