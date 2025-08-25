@@ -1,166 +1,215 @@
 #!/usr/bin/env python3
 """
-Robot Vision Workflow Test
-Simple test script that demonstrates the complete robot vision workflow:
-1. Capture photo from Pi camera server
-2. Detect AprilTags  
-3. Show results
-
-This tests the picam.py -> pi_cam_server workflow
+Complete Robot Vision System Test
+Tests camera connection, calibration, and AprilTag detection workflow
 """
 
-import subprocess
 import sys
 import os
-import argparse
 from pathlib import Path
-from picam import PiCam, PiCamConfig
 
-def run_command(cmd, description):
-    """Run a command and return success status"""
-    print(f"🔄 {description}...")
+def test_camera_connection():
+    """Test Pi camera connection"""
+    print("📡 Testing camera connection...")
+    
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        from picam import PiCam, PiCamConfig
+        
+        if not os.path.exists("client_config.yaml"):
+            print("❌ client_config.yaml not found")
+            print("   Create config file first with your Pi's IP address")
+            return False
+        
+        config = PiCamConfig.from_yaml("client_config.yaml")
+        camera = PiCam(config)
+        
+        if camera.test_connection():
+            print("✅ Camera connection successful")
+            
+            # Test photo capture
+            photo_path = camera.capture_photo()
+            if photo_path and os.path.exists(photo_path):
+                file_size = os.path.getsize(photo_path)
+                print(f"✅ Photo captured: {photo_path} ({file_size} bytes)")
+                return True
+            else:
+                print("❌ Failed to capture photo")
+                return False
+        else:
+            print("❌ Cannot connect to camera server")
+            print("   Check Pi IP address and ensure server is running")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Camera test failed: {e}")
+        return False
+
+def test_calibration_files():
+    """Check if calibration files are available"""
+    print("\n� Checking calibration resources...")
+    
+    chessboard_path = Path("camera calibration/Calibration chessboard (US Letter).pdf")
+    calibration_script = Path("calibrate_camera.py")
+    
+    if chessboard_path.exists():
+        print("✅ Calibration chessboard PDF found")
+    else:
+        print("❌ Calibration chessboard PDF missing")
+        return False
+    
+    if calibration_script.exists():
+        print("✅ Calibration script available")
+    else:
+        print("❌ calibrate_camera.py missing")
+        return False
+    
+    # Check for existing calibration
+    calib_file = Path("camera_calibration/camera_calibration.yaml")
+    if calib_file.exists():
+        print("✅ Camera calibration file exists")
+        try:
+            import yaml
+            with open(calib_file, 'r') as f:
+                calib_data = yaml.safe_load(f)
+            if 'camera_matrix' in calib_data:
+                print("✅ Valid calibration data found")
+                return True
+        except Exception as e:
+            print(f"⚠️  Calibration file exists but may be invalid: {e}")
+    else:
+        print("⚠️  No camera calibration found")
+        print("   Run: cd camera_calibration && python capture_calibration_photos.py")
+        print("   Then: python calculate_camera_intrinsics.py")
+    
+    return True
+
+def test_apriltag_detection():
+    """Test AprilTag detection capabilities"""
+    print("\n🏷️  Testing AprilTag detection...")
+    
+    try:
+        from pupil_apriltags import Detector
+        print("✅ pupil-apriltags library available")
+        
+        # Test detector initialization
+        detector = Detector(families='tag36h11')
+        print("✅ AprilTag detector initialized")
+        
+        apriltag_script = Path("test_apriltag_detection.py")
+        if apriltag_script.exists():
+            print("✅ AprilTag detection script available")
+        else:
+            print("❌ test_apriltag_detection.py missing")
+            return False
+            
+        return True
+        
+    except ImportError:
+        print("❌ pupil-apriltags library not installed")
+        print("   Install with: pip install pupil-apriltags")
+        return False
+    except Exception as e:
+        print(f"❌ AprilTag test failed: {e}")
+        return False
+
+def test_dependencies():
+    """Test required dependencies"""
+    print("\n📦 Checking dependencies...")
+    
+    required_modules = [
+        ('cv2', 'opencv-python'),
+        ('numpy', 'numpy'),
+        ('yaml', 'pyyaml'),
+        ('requests', 'requests'),
+    ]
+    
+    missing = []
+    for module, package in required_modules:
+        try:
+            __import__(module)
+            print(f"✅ {module}")
+        except ImportError:
+            print(f"❌ {module} (install: pip install {package})")
+            missing.append(package)
+    
+    if missing:
+        print(f"\n� Install missing packages:")
+        print(f"   pip install {' '.join(missing)}")
+        return False
+    
+    return True
+
+def run_apriltag_detection_test():
+    """Run a quick AprilTag detection test"""
+    print("\n🎯 Running AprilTag detection test...")
+    
+    try:
+        import subprocess
+        result = subprocess.run([
+            sys.executable, "test_apriltag_detection.py", "--help"
+        ], capture_output=True, text=True)
+        
         if result.returncode == 0:
-            print(f"✅ {description} - Success")
+            print("✅ AprilTag detection script executable")
             return True
         else:
-            print(f"❌ {description} - Failed")
+            print("❌ AprilTag detection script has issues")
             if result.stderr:
                 print(f"   Error: {result.stderr.strip()}")
             return False
+            
     except Exception as e:
-        print(f"❌ {description} - Error: {e}")
+        print(f"❌ Failed to test AprilTag script: {e}")
         return False
-
-def check_dependencies():
-    """Check if required dependencies are installed"""
-    print("🔍 Checking dependencies...")
-    
-    try:
-        import cv2
-        import numpy as np
-        print("   ✅ OpenCV and NumPy")
-    except ImportError:
-        print("   ❌ Install OpenCV: pip install opencv-python numpy")
-        return False
-    
-    try:
-        import pupil_apriltags
-        import scipy
-        import matplotlib
-        print("   ✅ AprilTag detection libraries")
-    except ImportError:
-        print("   ❌ Install vision libs: pip install pupil-apriltags scipy matplotlib")
-        return False
-    
-    return True
-
-def test_camera_connection(pi_ip, port=2222):
-    """Test camera server connection using PiCam"""
-    print("🔍 Testing camera server connection...")
-    
-    config = PiCamConfig(hostname=pi_ip, port=port)
-    camera = PiCam(config)
-    
-    if camera.test_connection():
-        print(f"✅ Camera server accessible at {pi_ip}:{port}")
-        return True
-    else:
-        print(f"❌ Cannot connect to camera server at {pi_ip}:{port}")
-        return False
-
-def capture_photo_direct(pi_ip, port=2222):
-    """Capture photo using PiCam"""
-    print("📸 Capturing photo...")
-    
-    config = PiCamConfig(hostname=pi_ip, port=port)
-    camera = PiCam(config)
-    
-    photo_path = camera.capture_photo("test_photo.jpg")
-    if photo_path and os.path.exists(photo_path):
-        file_size = os.path.getsize(photo_path)
-        print(f"✅ Photo captured: {photo_path} ({file_size} bytes)")
-        return True
-    
-    print("❌ Failed to capture photo")
-    return False
-
-def detect_apriltags():
-    """Detect AprilTags in the latest photo"""
-    return run_command("python detect_apriltags.py --latest --show", "Detecting AprilTags")
-
-def robot_vision_workflow(pi_ip=None):
-    """Run the complete robot vision workflow"""
-    print("🤖 Robot Vision Workflow Test")
-    print("=" * 50)
-    
-    if not pi_ip:
-        pi_ip = input("Enter Pi IP address (or press Enter for localhost): ").strip()
-        if not pi_ip:
-            pi_ip = "localhost"
-    
-    # Step 1: Check dependencies
-    if not check_dependencies():
-        print("\n❌ Dependencies missing - install them first")
-        return False
-    
-    # Step 2: Test camera connection
-    print(f"\n📡 Step 1: Test Camera Connection")
-    if not test_camera_connection(pi_ip):
-        print("   💡 Make sure Pi camera server is running")
-        print(f"   💡 Check if {pi_ip} is accessible")
-        return False
-    
-    # Step 3: Capture photo directly
-    print(f"\n📸 Step 2: Capture Photo")
-    if not capture_photo_direct(pi_ip):
-        print("   💡 Check camera server and network connection")
-        return False
-    
-    # Step 4: Detect AprilTags
-    print(f"\n🎯 Step 3: Detect AprilTags")
-    if not detect_apriltags():
-        print("   💡 Make sure you have AprilTags visible in the photo")
-        print("   💡 Check camera calibration with: python calibrate_camera.py")
-        return False
-    
-    print(f"\n✅ Robot Vision Workflow Complete!")
-    print("   📸 Photo captured from Pi camera server")
-    print("   🎯 AprilTags detected and annotated")
-    print("   📊 Results displayed")
-    
-    return True
 
 def main():
-    """Main function - simple robot vision workflow"""
-    import argparse
+    """Run complete system test"""
+    print("🤖 Robot Vision System Test")
+    print("=" * 50)
     
-    parser = argparse.ArgumentParser(description="Robot Vision Workflow Test")
-    parser.add_argument("hostname", nargs="?", help="Pi hostname/IP (optional)")
-    parser.add_argument("--loop", action="store_true", help="Run continuously")
+    tests = [
+        ("Dependencies", test_dependencies),
+        ("Camera Connection", test_camera_connection),
+        ("Calibration Resources", test_calibration_files),
+        ("AprilTag Detection", test_apriltag_detection),
+        ("AprilTag Script Test", run_apriltag_detection_test),
+    ]
     
-    args = parser.parse_args()
-    
-    if args.loop:
-        print("🔄 Continuous robot vision testing (Ctrl+C to stop)")
+    results = []
+    for name, test_func in tests:
         try:
-            while True:
-                print("\n" + "="*60)
-                input("Press Enter to run workflow (Ctrl+C to exit)...")
-                robot_vision_workflow(args.hostname)
-        except KeyboardInterrupt:
-            print("\n\n👋 Testing stopped by user")
+            result = test_func()
+            results.append((name, result))
+        except Exception as e:
+            print(f"❌ {name} test crashed: {e}")
+            results.append((name, False))
+    
+    # Summary
+    print("\n" + "=" * 50)
+    print("� Test Results:")
+    
+    all_passed = True
+    for name, passed in results:
+        status = "✅ PASS" if passed else "❌ FAIL"
+        print(f"   {name}: {status}")
+        if not passed:
+            all_passed = False
+    
+    print("\n" + "=" * 50)
+    if all_passed:
+        print("🎉 All tests passed! System ready for robot vision.")
+        print("\nNext steps:")
+        print("1. Calibrate camera: cd camera_calibration && python capture_calibration_photos.py")
+        print("2. Calculate intrinsics: python calculate_camera_intrinsics.py")
+        print("3. Test AprilTag detection: python ../test_apriltag_detection.py")
+        print("4. Print AprilTags and test pose estimation")
     else:
-        # Single run
-        success = robot_vision_workflow(args.hostname)
-        if not success:
-            print("\n🔧 Troubleshooting tips:")
-            print("   1. Install dependencies: pip install pupil-apriltags scipy matplotlib opencv-python")
-            print("   2. Start Pi camera server: ssh pi@[IP] 'python /home/pi/robot_camera/camera_server.py'")
-            print("   3. Test camera: python camera_client.py [IP] --test")
-            print("   4. Calibrate camera: python calibrate_camera.py")
-            sys.exit(1)
+        print("⚠️  Some tests failed. Please address the issues above.")
+        print("\nQuick fixes:")
+        print("- Install dependencies: pip install -r requirements.txt")
+        print("- Check Pi connection: edit client_config.yaml")
+        print("- Ensure Pi server is running: sudo systemctl status pi-camera-server")
+        print("- Calibrate camera: cd camera_calibration && python capture_calibration_photos.py")
 
 if __name__ == "__main__":
     main()

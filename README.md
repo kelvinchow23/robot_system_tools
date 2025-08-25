@@ -57,6 +57,38 @@ if photo_path:
 python test_robot_vision.py
 ```
 
+### Camera Calibration
+
+For accurate AprilTag pose estimation:
+
+```bash
+# 1. Print the calibration chessboard (8x6 external corners, 30mm squares)
+# Use: camera_calibration/Calibration chessboard (US Letter).pdf
+# Print at 100% scale, mount on rigid surface
+
+# 2. Capture 10 calibration photos
+cd camera_calibration
+python capture_calibration_photos.py
+
+# 3. Calculate camera intrinsics from photos
+python calculate_camera_intrinsics.py
+
+# This creates camera_calibration.yaml in the camera_calibration directory
+```
+
+### AprilTag Detection
+
+```bash
+# Single detection with pose estimation
+python test_apriltag_detection.py
+
+# Continuous detection mode
+python test_apriltag_detection.py --continuous
+
+# Custom tag size (measure your printed tags in mm)
+python test_apriltag_detection.py --tag-size 50.0
+```
+
 ## 📁 File Structure
 
 ```
@@ -67,10 +99,19 @@ robot_system_tools/
 │   ├── setup.sh            # Pi setup script
 │   ├── install.sh           # One-line installer
 │   └── requirements.txt     # Dependencies
+├── camera_calibration/      # Camera calibration workflow
+│   ├── README.md           # Calibration instructions
+│   ├── Calibration chessboard (US Letter).pdf
+│   ├── capture_calibration_photos.py    # Step 1: Capture photos
+│   ├── calculate_camera_intrinsics.py   # Step 2: Calculate intrinsics
+│   ├── camera_calibration.yaml          # Generated camera intrinsics
+│   └── calibration_photos/ # Captured calibration photos
 ├── picam.py                 # Client library
 ├── client_config.yaml       # Client configuration
 ├── test_camera_with_config.py  # Simple test
 ├── test_robot_vision.py     # Full workflow test
+├── test_apriltag_detection.py  # AprilTag detection & pose
+├── requirements.txt         # Client dependencies
 └── README.md               # This file
 ```
 
