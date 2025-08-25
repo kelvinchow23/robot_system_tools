@@ -8,6 +8,7 @@ import socket
 import threading
 import time
 import os
+import sys
 import yaml
 import logging
 import argparse
@@ -20,6 +21,13 @@ try:
 except ImportError:
     print("❌ picamera2 not available")
     CAMERA_AVAILABLE = False
+
+try:
+    from pi_led_controller import PiLEDController
+    LED_AVAILABLE = True
+except ImportError:
+    print("⚠️  LED controller not available")
+    LED_AVAILABLE = False
 
 class SimpleCameraConfig:
     """Simple camera configuration"""
@@ -81,6 +89,17 @@ class SimpleCameraServer:
         self.server_socket = None
         self.running = False
         
+        # Initialize LED controller
+        self.led_controller = None
+        if LED_AVAILABLE:
+            try:
+                self.led_controller = PiLEDController()
+                self.led_controller.indicate_server_starting()
+                print("💡 LED status indication enabled")
+            except Exception as e:
+                print(f"⚠️  LED controller failed: {e}")
+                self.led_controller = None
+        
         # Ensure photo directory exists
         Path(self.config.photo_directory).mkdir(exist_ok=True)
         
@@ -96,6 +115,10 @@ class SimpleCameraServer:
                 self.camera.configure(config)
                 print("✅ Camera initialized successfully")
                 
+                # Indicate successful startup
+                if self.led_controller:
+                    self.led_controller.indicate_server_running()
+                
             except Exception as e:
                 print(f"❌ Camera initialization failed: {e}")
                 print("💡 Troubleshooting tips:")
@@ -105,14 +128,26 @@ class SimpleCameraServer:
                 print("   4. Check no other process using camera: sudo fuser /dev/video*")
                 print("   5. Test camera manually: rpicam-still -o test.jpg")
                 self.camera = None
+                
+                # Indicate error
+                if self.led_controller:
+                    self.led_controller.indicate_server_error()
         else:
             print("❌ picamera2 not available")
             print("💡 Install with: sudo apt install python3-picamera2")
+            
+            # Indicate error
+            if self.led_controller:
+                self.led_controller.indicate_server_error()
 
     def take_photo(self) -> str:
         """Take a photo and return the filename"""
         if not self.camera:
             raise Exception("Camera not available")
+        
+        # LED indication for photo capture
+        if self.led_controller:
+            self.led_controller.indicate_camera_capture()
         
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         filename = f"capture_{timestamp}.jpg"
@@ -265,6 +300,11 @@ class SimpleCameraServer:
             self.server_socket.close()
         if self.camera:
             self.camera.close()
+        
+        # Restore LED defaults
+        if self.led_controller:
+            self.led_controller.restore_default()
+            
         print("🛑 Camera server stopped")
 
 def setup_logging(log_level: str = "INFO"):

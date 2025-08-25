@@ -50,6 +50,25 @@ if photo_path:
     print(f"Photo saved: {photo_path}")
 ```
 
+### Camera Calibration for AprilTag Detection
+
+For accurate AprilTag pose estimation, calibrate your camera first:
+
+```bash
+# 1. Generate a checkerboard pattern to print
+python generate_checkerboard.py --width 10 --height 7 --output my_checkerboard.png
+
+# 2. Print the checkerboard and mount on rigid surface
+
+# 3. Run calibration (captures 20 images by default)
+python calibrate_camera.py --images 20 --checkerboard 9 6 --square-size 25.0
+
+# 4. Test the calibration
+python test_calibration.py --capture-new
+```
+
+The calibration creates `camera_calibration.yaml` with camera intrinsics needed for pose estimation.
+
 ### Robot Vision Workflow
 
 ```python
@@ -66,12 +85,39 @@ robot_system_tools/
 │   ├── camera_config.yaml   # Server configuration
 │   ├── setup.sh            # Pi setup script
 │   ├── install.sh           # One-line installer
-│   └── requirements.txt     # Dependencies
+│   ├── requirements.txt     # Dependencies
+│   ├── pi_led_controller.py # LED status indication
+│   └── check_pi_leds.py     # Check available LEDs
 ├── picam.py                 # Client library
 ├── client_config.yaml       # Client configuration
 ├── test_camera_with_config.py  # Simple test
 ├── test_robot_vision.py     # Full workflow test
+├── calibrate_camera.py      # Camera calibration routine
+├── test_calibration.py      # Test calibration results
+├── generate_checkerboard.py # Generate calibration pattern
 └── README.md               # This file
+```
+
+## 💡 LED Status Indication
+
+The camera server uses onboard LEDs to show status:
+
+**Pi Zero 2W:**
+- **🟢 Green LED (ACT)**: Main status indicator
+  - Blinking: Server starting up
+  - Steady: Server running normally  
+  - Brief flash: Photo being captured
+- **Error indication**: Uses available LED (mmc0 or default-on)
+  - Blinking pattern indicates server errors
+
+**Pi 5:**
+- **🟢 Green LED (ACT)**: Server status  
+- **🔴 Red LED (PWR)**: Error indication
+
+Check available LEDs on your Pi:
+```bash
+# On the Pi, run:
+python3 pi_cam_server/check_pi_leds.py
 ```
 
 ## ⚙️ Configuration
