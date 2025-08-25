@@ -20,7 +20,9 @@ def main():
         # Use command-line arguments
         print(f"📝 Using command-line arguments...")
         print(f"🔗 Connecting to: {args.host}:{args.port}")
-        cam = PiCam(host=args.host, port=args.port)
+        # Create config object with command-line arguments
+        config = PiCamConfig(hostname=args.host, port=args.port)
+        cam = PiCam(config)
     else:
         # Load config from file
         print("📝 Loading config from client_config.yaml...")

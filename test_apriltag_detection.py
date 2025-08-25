@@ -279,7 +279,9 @@ def main():
     print("📡 Connecting to Pi camera...")
     if args.host:
         print(f"🔗 Using command-line arguments: {args.host}:{args.port}")
-        camera = PiCam(host=args.host, port=args.port)
+        # Create config object with command-line arguments
+        config = PiCamConfig(hostname=args.host, port=args.port)
+        camera = PiCam(config)
     else:
         config = PiCamConfig.from_yaml(args.config)
         camera = PiCam(config)
