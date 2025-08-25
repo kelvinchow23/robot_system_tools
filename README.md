@@ -98,22 +98,67 @@ robot_system_tools/
 │   ├── camera_config.yaml   # Server configuration
 │   ├── setup.sh            # Pi setup script
 │   ├── install.sh           # One-line installer
-│   └── requirements.txt     # Dependencies
+│   └── requirements.txt     # Python dependencies
 ├── camera_calibration/      # Camera calibration workflow
-│   ├── README.md           # Calibration instructions
-│   ├── Calibration chessboard (US Letter).pdf
-│   ├── capture_calibration_photos.py    # Step 1: Capture photos
-│   ├── calculate_camera_intrinsics.py   # Step 2: Calculate intrinsics
-│   ├── camera_calibration.yaml          # Generated camera intrinsics
-│   └── calibration_photos/ # Captured calibration photos
-├── picam.py                 # Client library
+│   ├── capture_calibration_photos.py  # Capture calibration images
+│   ├── calculate_camera_intrinsics.py # Calculate intrinsics
+│   ├── camera_calibration.yaml        # Generated camera intrinsics
+│   ├── Calibration chessboard (US Letter).pdf  # Chessboard pattern
+│   ├── QUALITY_GUIDE.md               # Quality metrics guide
+│   └── README.md                      # Calibration documentation
+├── handeye_calibration/     # Hand-eye calibration for robots
+│   ├── collect_handeye_data.py        # Data collection for UR robots
+│   ├── calculate_handeye_calibration.py  # Solve calibration problem
+│   ├── coordinate_transformer.py      # Runtime coordinate transformation
+│   └── README.md                      # Hand-eye calibration guide
+├── ur_robot_interface.py    # Universal Robots interface via RTDE
+├── picam.py                 # Pi camera client library
 ├── client_config.yaml       # Client configuration
-├── test_camera_with_config.py  # Simple test
-├── test_robot_vision.py     # Full workflow test
-├── test_apriltag_detection.py  # AprilTag detection & pose
-├── requirements.txt         # Client dependencies
+├── test_camera_capture.py   # Basic camera test
+├── test_apriltag_detection.py  # AprilTag detection and pose estimation
+├── test_robot_vision.py     # Complete vision system test
 └── README.md               # This file
 ```
+
+## 🤖 Robot Integration
+
+### Hand-Eye Calibration for UR Robots
+
+For robot manipulation applications, perform hand-eye calibration to transform camera coordinates to robot base frame:
+
+```bash
+# Step 1: Collect calibration data
+cd handeye_calibration
+python collect_handeye_data.py --robot-ip 192.168.1.100 --auto-poses
+
+# Step 2: Calculate hand-eye transformation
+python calculate_handeye_calibration.py --input handeye_data_*.json --validate
+
+# Step 3: Use for coordinate transformation
+python coordinate_transformer.py --calibration handeye_calibration_*.yaml
+```
+
+### Runtime Robot Vision
+
+```python
+from ur_robot_interface import URRobotInterface
+from handeye_calibration.coordinate_transformer import CoordinateTransformer
+
+# Initialize robot and transformer
+robot = URRobotInterface('192.168.1.100')
+transformer = CoordinateTransformer('handeye_calibration.yaml')
+
+# Detect AprilTag and transform to robot coordinates
+current_robot_pose = robot.get_tcp_pose()
+robot_detection = transformer.transform_apriltag_detection(
+    apriltag_detection, current_robot_pose
+)
+
+# Get tag position in robot base frame
+tag_position = robot_detection['robot_frame_pose']['translation_vector']
+```
+
+See `handeye_calibration/README.md` for detailed instructions.
 
 ## ⚙️ Configuration
 

@@ -253,6 +253,8 @@ def main():
     parser = argparse.ArgumentParser(description='AprilTag Detection and Pose Estimation')
     parser.add_argument('--config', default='client_config.yaml',
                        help='Pi camera config file')
+    parser.add_argument('--host', help='Camera server hostname/IP (overrides config file)')
+    parser.add_argument('--port', type=int, default=2222, help='Camera server port (default: 2222)')
     parser.add_argument('--calibration', default='camera_calibration/camera_calibration.yaml',
                        help='Camera calibration file')
     parser.add_argument('--tag-family', default='tag36h11',
@@ -275,8 +277,12 @@ def main():
     
     # Load camera config and connect
     print("📡 Connecting to Pi camera...")
-    config = PiCamConfig.from_yaml(args.config)
-    camera = PiCam(config)
+    if args.host:
+        print(f"🔗 Using command-line arguments: {args.host}:{args.port}")
+        camera = PiCam(host=args.host, port=args.port)
+    else:
+        config = PiCamConfig.from_yaml(args.config)
+        camera = PiCam(config)
     
     if not camera.test_connection():
         print("❌ Failed to connect to camera server")

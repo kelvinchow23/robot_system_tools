@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 """
 Simple Pi Camera Test with Config File
-Tests connection and captures a photo using client_config.yaml
+Tests connection and captures a photo using client_config.yaml or command-line arguments
 """
 
+import argparse
 from picam import PiCam, PiCamConfig
 
 def main():
+    parser = argparse.ArgumentParser(description="Test Pi Camera connection and capture")
+    parser.add_argument("--host", help="Camera server hostname/IP (overrides config file)")
+    parser.add_argument("--port", type=int, default=2222, help="Camera server port (default: 2222)")
+    args = parser.parse_args()
+    
     print("🍓 Pi Camera Client Test")
     print("========================")
     
-    # Load config from file
-    print("📝 Loading config from client_config.yaml...")
-    config = PiCamConfig.from_yaml("client_config.yaml")
-    
-    print(f"🔗 Connecting to: {config.hostname}:{config.port}")
-    print(f"📁 Photos will be saved to: {config.download_dir}")
-    
-    # Initialize camera
-    cam = PiCam(config)
+    if args.host:
+        # Use command-line arguments
+        print(f"📝 Using command-line arguments...")
+        print(f"🔗 Connecting to: {args.host}:{args.port}")
+        cam = PiCam(host=args.host, port=args.port)
+    else:
+        # Load config from file
+        print("📝 Loading config from client_config.yaml...")
+        config = PiCamConfig.from_yaml("client_config.yaml")
+        print(f"🔗 Connecting to: {config.hostname}:{config.port}")
+        cam = PiCam(config)
     
     # Test connection
     print("\n🔍 Testing connection...")
