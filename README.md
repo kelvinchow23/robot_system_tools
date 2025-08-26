@@ -31,7 +31,7 @@ cd robot_system_tools
 # Edit client_config.yaml and set your Pi's IP
 
 # Test the connection
-python test_camera_with_config.py
+python tests/test_camera_capture.py
 ```
 
 ## 📱 Usage
@@ -39,7 +39,7 @@ python test_camera_with_config.py
 ### Simple Photo Capture
 
 ```python
-from picam import PiCam, PiCamConfig
+from camera.picam.picam import PiCam, PiCamConfig
 
 # Load config and capture photo
 config = PiCamConfig.from_yaml("client_config.yaml")
@@ -54,7 +54,7 @@ if photo_path:
 
 ```python
 # Full workflow with AprilTag detection
-python test_robot_vision.py
+python tests/test_robot_vision.py
 ```
 
 ### Camera Calibration
@@ -68,10 +68,10 @@ For accurate AprilTag pose estimation:
 
 # 2. Capture 10 calibration photos
 cd camera_calibration
-python capture_calibration_photos.py
+python camera_calibration/capture_calibration_photos.py
 
 # 3. Calculate camera intrinsics from photos
-python calculate_camera_intrinsics.py
+python camera_calibration/calculate_camera_intrinsics.py
 
 # This creates camera_calibration.yaml in the camera_calibration directory
 ```
@@ -80,44 +80,56 @@ python calculate_camera_intrinsics.py
 
 ```bash
 # Single detection with pose estimation
-python test_apriltag_detection.py
+python tests/test_apriltag_detection.py
 
 # Continuous detection mode
-python test_apriltag_detection.py --continuous
+python tests/test_apriltag_detection.py --continuous
 
 # Custom tag size (measure your printed tags in mm)
-python test_apriltag_detection.py --tag-size 50.0
+python tests/test_apriltag_detection.py --tag-size 50.0
 ```
 
 ## 📁 File Structure
 
 ```
 robot_system_tools/
-├── pi_cam_server/           # Pi camera server
-│   ├── camera_server.py     # Main server application
-│   ├── camera_config.yaml   # Server configuration
-│   ├── setup.sh            # Pi setup script
-│   ├── install.sh           # One-line installer
-│   └── requirements.txt     # Python dependencies
-├── camera_calibration/      # Camera calibration workflow
+├── .github/
+│   └── copilot-instructions.md      # Development practices for Copilot
+├── documentation/
+│   ├── ARCHITECTURE.md              # System architecture
+│   └── CHANGELOG.md                 # Project changelog
+├── camera/
+│   └── picam/                       # Pi camera client
+│       ├── picam.py                 # Camera client library
+│       └── setup_picam_client.sh    # Client setup script
+├── robots/
+│   └── ur/                          # Universal Robots interface
+│       └── ur_robot_interface.py    # RTDE-based UR interface
+├── tests/                           # Test scripts
+│   ├── test_camera_capture.py       # Basic camera test
+│   ├── test_apriltag_detection.py   # AprilTag detection test
+│   ├── test_robot_vision.py         # Complete vision system test
+│   └── test_ur_robot.py             # UR robot interface test
+├── pi_cam_server/                   # Pi camera server
+│   ├── camera_server.py             # Main server application
+│   ├── camera_config.yaml           # Server configuration
+│   ├── setup.sh                     # Pi setup script
+│   ├── install.sh                   # One-line installer
+│   └── requirements.txt             # Python dependencies
+├── camera_calibration/              # Camera calibration workflow
 │   ├── capture_calibration_photos.py  # Capture calibration images
 │   ├── calculate_camera_intrinsics.py # Calculate intrinsics
 │   ├── camera_calibration.yaml        # Generated camera intrinsics
 │   ├── Calibration chessboard (US Letter).pdf  # Chessboard pattern
 │   ├── QUALITY_GUIDE.md               # Quality metrics guide
 │   └── README.md                      # Calibration documentation
-├── handeye_calibration/     # Hand-eye calibration for robots
-│   ├── collect_handeye_data.py        # Data collection for UR robots
+├── handeye_calibration/             # Hand-eye calibration for robots
+│   ├── collect_handeye_data.py      # Data collection for UR robots
 │   ├── calculate_handeye_calibration.py  # Solve calibration problem
-│   ├── coordinate_transformer.py      # Runtime coordinate transformation
-│   └── README.md                      # Hand-eye calibration guide
-├── ur_robot_interface.py    # Universal Robots interface via RTDE
-├── picam.py                 # Pi camera client library
-├── client_config.yaml       # Client configuration
-├── test_camera_capture.py   # Basic camera test
-├── test_apriltag_detection.py  # AprilTag detection and pose estimation
-├── test_robot_vision.py     # Complete vision system test
-└── README.md               # This file
+│   ├── coordinate_transformer.py    # Runtime coordinate transformation
+│   └── README.md                    # Hand-eye calibration guide
+├── client_config.yaml               # Client configuration
+└── README.md                        # This file
 ```
 
 ## 🤖 Robot Integration
@@ -129,13 +141,13 @@ For robot manipulation applications, perform hand-eye calibration to transform c
 ```bash
 # Step 1: Collect calibration data
 cd handeye_calibration
-python collect_handeye_data.py --robot-ip 192.168.1.100 --auto-poses
+python handeye_calibration/collect_handeye_data.py --robot-ip 192.168.1.100 --auto-poses
 
 # Step 2: Calculate hand-eye transformation
-python calculate_handeye_calibration.py --input handeye_data_*.json --validate
+python handeye_calibration/calculate_handeye_calibration.py --input handeye_data_*.json --validate
 
 # Step 3: Use for coordinate transformation
-python coordinate_transformer.py --calibration handeye_calibration_*.yaml
+python handeye_calibration/coordinate_transformer.py --calibration handeye_calibration_*.yaml
 ```
 
 ### Runtime Robot Vision

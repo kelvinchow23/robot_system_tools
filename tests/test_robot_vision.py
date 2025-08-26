@@ -8,6 +8,9 @@ import sys
 import os
 from pathlib import Path
 
+# Add camera module to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'camera', 'picam'))
+
 def test_camera_connection():
     """Test Pi camera connection"""
     print("📡 Testing camera connection...")

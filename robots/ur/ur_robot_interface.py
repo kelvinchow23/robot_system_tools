@@ -6,34 +6,9 @@ Provides clean interface for UR robot control via RTDE
 
 import numpy as np
 import time
+import rtde_control
+import rtde_receive
 from scipy.spatial.transform import Rotation as R
-
-try:
-    import rtde_control
-    import rtde_receive
-    RTDE_AVAILABLE = True
-except ImportError:
-    RTDE_AVAILABLE = False
-    print("⚠️  ur_rtde library not installed")
-    print("   Install with: pip install ur_rtde")
-    print("   Or use mock interface for development: import ur_robot_interface_mock")
-    
-    # Import mock interfaces for development
-    try:
-        from ur_robot_interface_mock import rtde_control, rtde_receive
-        print("🔧 Using mock RTDE interfaces for development")
-    except ImportError:
-        # Create minimal mock if mock file not available
-        class MockRTDEControl:
-            def RTDEControlInterface(self, ip):
-                raise ImportError("ur_rtde not available and no mock interface")
-        
-        class MockRTDEReceive:
-            def RTDEReceiveInterface(self, ip):
-                raise ImportError("ur_rtde not available and no mock interface")
-        
-        rtde_control = MockRTDEControl()
-        rtde_receive = MockRTDEReceive()
 
 class URRobotInterface:
     """Universal Robots interface using RTDE"""
@@ -47,20 +22,16 @@ class URRobotInterface:
             speed: Default linear speed (m/s)
             acceleration: Default acceleration (m/s²)
         """
-        if not RTDE_AVAILABLE:
-            print("⚠️  Using development mode (ur_rtde not available)")
-            print("   Functionality will be simulated for testing")
-        
         self.robot_ip = robot_ip
         self.speed = speed
         self.acceleration = acceleration
         
-        print(f"🤖 Connecting to UR robot at {robot_ip}{'(MOCK)' if not RTDE_AVAILABLE else ''}...")
+        print(f"🤖 Connecting to UR robot at {robot_ip}...")
         
         try:
             self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
             self.rtde_r = rtde_receive.RTDEReceiveInterface(robot_ip)
-            print(f"✅ Connected to UR robot{'(MOCK)' if not RTDE_AVAILABLE else ''}")
+            print("✅ Connected to UR robot")
         except Exception as e:
             print(f"❌ Failed to connect to robot: {e}")
             raise

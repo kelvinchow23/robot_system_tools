@@ -5,6 +5,9 @@ Tests connection and captures a photo using client_config.yaml or command-line a
 """
 
 import argparse
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'camera', 'picam'))
 from picam import PiCam, PiCamConfig
 
 def main():

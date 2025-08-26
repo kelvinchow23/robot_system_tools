@@ -14,6 +14,7 @@ from datetime import datetime
 
 # Add parent directory to path to import picam
 sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent / 'camera' / 'picam'))
 from picam import PiCam, PiCamConfig
 
 class CalibrationPhotoCapture:
