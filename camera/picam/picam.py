@@ -23,7 +23,7 @@ class PiCamConfig:
         Path(self.download_dir).mkdir(exist_ok=True)
     
     @classmethod
-    def from_yaml(cls, config_path: str = "client_config.yaml"):
+    def from_yaml(cls, config_path: str = "camera_client_config.yaml"):
         """Load config from client YAML file"""
         if not os.path.exists(config_path):
             print(f"⚠️  Config file {config_path} not found, using defaults")

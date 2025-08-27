@@ -1,10 +1,33 @@
-# Robot Camera System
+# Robot System Tools
 
-Simple, reliable Raspberry Pi camera server with easy Python client for robot vision applications.
+Complete robot vision system with UR robot control, camera capture, AprilTag detection, and hand-eye calibration.
 
 ## 🚀 Quick Start
 
-### 1. Pi Camera Server Setup (One Command)
+### 1. Virtual Environment Setup
+
+**First, set up the complete virtual environment** (required for all components):
+
+```bash
+# Clone the repo
+git clone https://github.com/kelvinchow23/robot_system_tools.git
+cd robot_system_tools
+
+# Set up virtual environment with all dependencies
+./setup_venv.sh
+
+# Activate the environment
+source venv/bin/activate
+```
+
+This installs dependencies for:
+- UR Robot control (RTDE)
+- Camera systems (OpenCV, Pi Camera)  
+- AprilTag detection
+- Hand-eye calibration
+- Development tools
+
+### 2. Pi Camera Server Setup (One Command)
 
 On your Raspberry Pi, run:
 ```bash
@@ -18,20 +41,25 @@ This will:
 - Enable auto-start on boot
 - Start the service immediately
 
-### 2. Client Setup
+### 3. Client Setup
 
-On your client computer:
+After setting up the virtual environment:
 
 ```bash
-# Clone the repo
-git clone https://github.com/kelvinchow23/robot_system_tools.git
-cd robot_system_tools
+# Activate environment (if not already active)
+source venv/bin/activate
 
 # Configure your Pi's IP address
-# Edit client_config.yaml and set your Pi's IP
+# Edit camera_client_config.yaml and set your Pi's IP
 
-# Test the connection
+# Test the camera connection
 python tests/test_camera_capture.py
+
+# Test UR robot connection (update IP in robots/ur/robot_config.yaml)
+python tests/test_ur_robot.py --robot-ip 192.168.0.10
+
+# Test AprilTag detection
+python tests/test_apriltag_detection.py
 ```
 
 ## 📱 Usage
@@ -41,8 +69,8 @@ python tests/test_camera_capture.py
 ```python
 from camera.picam.picam import PiCam, PiCamConfig
 
-# Load config and capture photo
-config = PiCamConfig.from_yaml("client_config.yaml")
+# Load config and capture photo (note: updated filename)
+config = PiCamConfig.from_yaml("camera_client_config.yaml")
 cam = PiCam(config)
 photo_path = cam.capture_photo()
 
