@@ -326,9 +326,9 @@ class HandEyeDataCollector:
 
 def main():
     parser = argparse.ArgumentParser(description='Hand-Eye Calibration Data Collection')
-    parser.add_argument('--robot-ip', default='192.168.1.100',
+    parser.add_argument('--robot-ip', default='192.168.0.10',
                        help='UR robot IP address')
-    parser.add_argument('--camera-config', default='client_config.yaml',
+    parser.add_argument('--camera-config', default='camera_client_config.yaml',
                        help='Camera configuration file')
     parser.add_argument('--tag-family', default='tag36h11',
                        choices=['tag36h11', 'tag25h9', 'tag16h5'],
