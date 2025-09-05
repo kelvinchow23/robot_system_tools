@@ -13,23 +13,28 @@ from scipy.spatial.transform import Rotation as R
 class URRobotInterface:
     """Universal Robots interface using RTDE"""
     
-    def __init__(self, robot_ip, speed=0.03, acceleration=0.08):
+    def __init__(self, robot_ip, speed=0.05, acceleration=0.2, read_only=False):
         """
         Initialize UR robot interface
         
         Args:
             robot_ip: IP address of UR robot
-            speed: Default linear speed (m/s)
-            acceleration: Default acceleration (m/s²)
+            speed: Default linear speed (m/s) - increased for reliability
+            acceleration: Default acceleration (m/s²) - increased for reliability
+            read_only: If True, only connect receive interface (no remote control needed)
         """
         self.robot_ip = robot_ip
         self.speed = speed
         self.acceleration = acceleration
+        self.read_only = read_only
         
         print(f"🤖 Connecting to UR robot at {robot_ip}...")
         
         try:
-            self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
+            if not read_only:
+                self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
+            else:
+                self.rtde_c = None
             self.rtde_r = rtde_receive.RTDEReceiveInterface(robot_ip)
             print("✅ Connected to UR robot")
         except Exception as e:
@@ -40,6 +45,12 @@ class URRobotInterface:
         self.home_pose = self.get_tcp_pose()
         print(f"📍 Current TCP pose: {self.format_pose(self.home_pose)}")
     
+    def set_calibration_speed(self):
+        """Set safe speeds for calibration movements to prevent protective stop"""
+        self.speed = 0.02  # Safe: 20mm/s
+        self.acceleration = 0.1  # Minimum acceptable: 100mm/s²
+        print("🐌 Calibration speeds set: 20mm/s, 100mm/s²")
+    
     def get_tcp_pose(self):
         """
         Get current TCP pose in base frame
@@ -47,7 +58,12 @@ class URRobotInterface:
         Returns:
             np.array: [x, y, z, rx, ry, rz] in meters and radians
         """
-        return np.array(self.rtde_r.getActualTCPPose())
+        pose = np.array(self.rtde_r.getActualTCPPose())
+        # Apply sign correction for Ry and Rz to match teach pendant convention
+        # If teach pendant shows opposite signs, flip them here
+        pose[4] = -pose[4]  # Flip Ry sign
+        pose[5] = -pose[5]  # Flip Rz sign
+        return pose
     
     def get_joint_positions(self):
         """

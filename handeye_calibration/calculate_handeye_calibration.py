@@ -266,12 +266,14 @@ class HandEyeCalibrator:
             print("❌ No calibration result to save")
             return None
         
-        output_path = Path(output_file)
+        # Always save to the handeye_calibration directory
+        script_dir = Path(__file__).parent
+        output_path = script_dir / output_file
         
         # Add timestamp to filename if default
         if output_path.name == "handeye_calibration.yaml":
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = output_path.parent / f"handeye_calibration_{timestamp}.yaml"
+            output_path = script_dir / f"handeye_calibration_{timestamp}.yaml"
         
         print(f"💾 Saving hand-eye calibration to: {output_path}")
         

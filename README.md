@@ -134,6 +134,59 @@ robot_system_tools/
 
 ## 🤖 Robot Integration
 
+### AprilTag Pick and Place Workflow
+
+For complete robot manipulation with AprilTag-based object detection:
+
+#### 1. Camera Server Setup
+On your Raspberry Pi:
+```bash
+curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/master/pi_cam_server/install.sh | bash
+```
+
+#### 2. Test Camera Connection
+Edit `client_config.yaml` with your Pi's IP address, then test:
+```bash
+cd tests
+python test_camera_capture.py
+```
+This establishes connection and verifies you can capture photos.
+
+#### 3. Camera Calibration
+```bash
+cd camera_calibration
+python capture_calibration_photos.py
+python calculate_camera_intrinsics.py
+```
+This creates `camera_calibration.yaml` with camera intrinsic parameters needed for accurate pose estimation.
+
+#### 4. AprilTag Detection Testing
+Place an AprilTag in camera view and test detection:
+```bash
+cd tests
+python test_apriltag_detection.py --camera-config ../client_config.yaml
+```
+Verify the tag is detected and distance measurements are roughly expected.
+
+#### 5. Hand-Eye Calibration
+```bash
+cd handeye_calibration
+python collect_handeye_data.py --robot-ip 192.168.0.10  # Use your robot's IP
+python calculate_handeye_calibration.py --input handeye_data_*.json
+```
+Note: Robot IP is passed as command argument (not in YAML file currently).
+This creates `handeye_calibration_YYYYMMDD_HHMMSS.yaml` with camera-to-robot transformation for deployment.
+
+#### 6. Network Configuration
+- **Robot + Laptop**: Same subnet (e.g., 192.168.0.x)
+- **Pi Camera + Laptop**: Same subnet (configure in `client_config.yaml`)  
+- **Robot + Pi Camera**: Different subnets OK
+
+#### 7. Grasp Teaching and Deployment
+- Attach AprilTags to objects
+- Teach grasp poses relative to tags using freedrive
+- Deploy pick-and-place with automatic pose transformation
+
 ### Hand-Eye Calibration for UR Robots
 
 For robot manipulation applications, perform hand-eye calibration to transform camera coordinates to robot base frame:
