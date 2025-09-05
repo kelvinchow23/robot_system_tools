@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Simple Pi Camera Test with Config File
-Tests connection and captures a photo using client_config.yaml or command-line arguments
+Tests connection and captures a photo using camera_client_config.yaml or command-line arguments
 """
 
 import argparse
@@ -28,8 +28,8 @@ def main():
         cam = PiCam(config)
     else:
         # Load config from file
-        print("📝 Loading config from client_config.yaml...")
-        config = PiCamConfig.from_yaml("client_config.yaml")
+        print("📝 Loading config from camera_client_config.yaml...")
+        config = PiCamConfig.from_yaml("camera_client_config.yaml")
         print(f"🔗 Connecting to: {config.hostname}:{config.port}")
         cam = PiCam(config)
     
@@ -39,7 +39,7 @@ def main():
         print("✅ Connection successful!")
     else:
         print("❌ Connection failed!")
-        print("   Check your Pi's IP address in client_config.yaml")
+        print("   Check your Pi's IP address in camera_client_config.yaml")
         print("   Make sure the camera server is running on the Pi")
         return
     
