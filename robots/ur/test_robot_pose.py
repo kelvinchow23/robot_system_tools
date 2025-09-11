@@ -8,20 +8,25 @@ from ur_robot_interface import URRobotInterface
 
 def main():
     parser = argparse.ArgumentParser(description='Get UR robot pose or joint angles')
-    parser.add_argument('--robot-ip', default='192.168.0.10',
-                       help='UR robot IP address')
+    parser.add_argument('--robot-ip', 
+                       help='UR robot IP address (overrides config file)')
     parser.add_argument('--mode', choices=['tcp', 'joints', 'both'], default='tcp',
                        help='What to read: tcp pose, joint angles, or both')
     parser.add_argument('--continuous', action='store_true',
                        help='Continuously read and display values')
+    parser.add_argument('--config', default='robot_config.yaml',
+                       help='Robot configuration file')
     
     args = parser.parse_args()
     
-    print(f"🤖 Connecting to UR robot at {args.robot_ip}...")
+    if args.robot_ip:
+        print(f"🤖 Using command-line IP: {args.robot_ip}")
+        robot = URRobotInterface(robot_ip=args.robot_ip, read_only=True)
+    else:
+        print("🤖 Using IP from config file...")
+        robot = URRobotInterface(read_only=True, config_file=args.config)
     
     try:
-        robot = URRobotInterface(args.robot_ip, read_only=True)
-        
         if args.continuous:
             print("📍 Continuous reading mode (Press Ctrl+C to stop)")
             import time

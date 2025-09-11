@@ -252,10 +252,12 @@ class HandEyeDataCollector:
 
 def main():
     parser = argparse.ArgumentParser(description='Hand-Eye Calibration Data Collection')
-    parser.add_argument('--robot-ip', default='192.168.0.10',
-                       help='UR robot IP address')
-    parser.add_argument('--camera-config', default='camera_../client_config.yaml',
+    parser.add_argument('--robot-ip', 
+                       help='UR robot IP address (overrides config file)')
+    parser.add_argument('--camera-config', default='../camera_client_config.yaml',
                        help='Camera configuration file')
+    parser.add_argument('--robot-config', default='../robots/ur/robot_config.yaml',
+                       help='Robot configuration file')
     parser.add_argument('--tag-family', default='tag36h11',
                        choices=['tag36h11', 'tag25h9', 'tag16h5'],
                        help='AprilTag family')
@@ -271,6 +273,25 @@ def main():
     print("🤖👁️ UR Robot Hand-Eye Calibration Data Collection")
     print("=" * 60)
     
+    # Determine robot IP
+    if args.robot_ip:
+        robot_ip = args.robot_ip
+        print(f"🤖 Using command-line robot IP: {robot_ip}")
+    else:
+        # Load IP from robot config file
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'robots', 'ur'))
+            from ur_robot_interface import URRobotInterface
+            
+            config = URRobotInterface.load_robot_config(args.robot_config)
+            robot_ip = config['robot']['ip_address']
+            print(f"🤖 Using robot IP from config file: {robot_ip}")
+        except Exception as e:
+            robot_ip = '192.168.0.10'
+            print(f"⚠️  Could not load robot config, using default IP: {robot_ip}")
+    
     # AprilTag configuration
     apriltag_config = {
         'tag_family': args.tag_family,
@@ -280,7 +301,7 @@ def main():
     
     try:
         collector = HandEyeDataCollector(
-            robot_ip=args.robot_ip,
+            robot_ip=robot_ip,
             camera_config_file=args.camera_config,
             apriltag_config=apriltag_config
         )

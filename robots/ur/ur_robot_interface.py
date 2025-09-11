@@ -8,34 +8,83 @@ import numpy as np
 import time
 import rtde_control
 import rtde_receive
+import yaml
+import os
+from pathlib import Path
 from scipy.spatial.transform import Rotation as R
 
 class URRobotInterface:
     """Universal Robots interface using RTDE"""
     
-    def __init__(self, robot_ip, speed=0.05, acceleration=0.2, read_only=False):
+    @staticmethod
+    def load_robot_config(config_file="robot_config.yaml"):
+        """
+        Load robot configuration from YAML file
+        
+        Args:
+            config_file: Path to robot config file
+            
+        Returns:
+            dict: Robot configuration
+        """
+        # Get the directory where this script is located
+        script_dir = Path(__file__).parent
+        config_path = script_dir / config_file
+        
+        if not config_path.exists():
+            print(f"⚠️  Config file {config_path} not found, using defaults")
+            return {
+                'robot': {
+                    'ip_address': '192.168.0.10',
+                    'default_speed': 0.05,
+                    'default_acceleration': 0.2
+                }
+            }
+        
+        try:
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+            return config
+        except Exception as e:
+            print(f"⚠️  Error loading config file: {e}, using defaults")
+            return {
+                'robot': {
+                    'ip_address': '192.168.0.10',
+                    'default_speed': 0.05,
+                    'default_acceleration': 0.2
+                }
+            }
+    
+    def __init__(self, robot_ip=None, speed=None, acceleration=None, read_only=False, config_file="robot_config.yaml"):
         """
         Initialize UR robot interface
         
         Args:
-            robot_ip: IP address of UR robot
-            speed: Default linear speed (m/s) - increased for reliability
-            acceleration: Default acceleration (m/s²) - increased for reliability
+            robot_ip: IP address of UR robot (overrides config file if provided)
+            speed: Default linear speed (m/s) (overrides config file if provided)
+            acceleration: Default acceleration (m/s²) (overrides config file if provided)
             read_only: If True, only connect receive interface (no remote control needed)
+            config_file: Path to robot configuration YAML file
         """
-        self.robot_ip = robot_ip
-        self.speed = speed
-        self.acceleration = acceleration
+        # Load configuration
+        config = self.load_robot_config(config_file)
+        robot_config = config.get('robot', {})
+        
+        # Use provided values or fall back to config file, then defaults
+        self.robot_ip = robot_ip or robot_config.get('ip_address', '192.168.0.10')
+        self.speed = speed or robot_config.get('default_speed', 0.05)
+        self.acceleration = acceleration or robot_config.get('default_acceleration', 0.2)
         self.read_only = read_only
         
-        print(f"🤖 Connecting to UR robot at {robot_ip}...")
+        print(f"🤖 Connecting to UR robot at {self.robot_ip}...")
+        print(f"📋 Using config: speed={self.speed}m/s, accel={self.acceleration}m/s²")
         
         try:
             if not read_only:
-                self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
+                self.rtde_c = rtde_control.RTDEControlInterface(self.robot_ip)
             else:
                 self.rtde_c = None
-            self.rtde_r = rtde_receive.RTDEReceiveInterface(robot_ip)
+            self.rtde_r = rtde_receive.RTDEReceiveInterface(self.robot_ip)
             print("✅ Connected to UR robot")
         except Exception as e:
             print(f"❌ Failed to connect to robot: {e}")
@@ -59,10 +108,7 @@ class URRobotInterface:
             np.array: [x, y, z, rx, ry, rz] in meters and radians
         """
         pose = np.array(self.rtde_r.getActualTCPPose())
-        # Apply sign correction for Ry and Rz to match teach pendant convention
-        # If teach pendant shows opposite signs, flip them here
-        pose[4] = -pose[4]  # Flip Ry sign
-        pose[5] = -pose[5]  # Flip Rz sign
+        # No sign corrections needed - raw RTDE matches teach pendant
         return pose
     
     def get_joint_positions(self):
