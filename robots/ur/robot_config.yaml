@@ -17,7 +17,3 @@ robot:
 # Camera Configuration (for future use)
 camera:
   calibration_file: "camera_calibration/camera_calibration.yaml"
-  
-# Hand-eye calibration (for future use)  
-handeye:
-  calibration_file: "handeye_calibration/handeye_calibration.yaml"

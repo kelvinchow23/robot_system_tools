@@ -1,6 +1,6 @@
 # Robot System Tools
 
-Complete robot vision system with UR robot control, camera capture, AprilTag detection, and hand-eye calibration.
+Complete robot vision system with UR robot control, camera capture, and AprilTag detection.
 
 ## 🚀 Quick Start
 
@@ -24,7 +24,6 @@ This installs dependencies for:
 - UR Robot control (RTDE)
 - Camera systems (OpenCV, Pi Camera)  
 - AprilTag detection
-- Hand-eye calibration
 - Development tools
 
 ### 2. Pi Camera Server Setup (One Command)
@@ -62,14 +61,14 @@ python tests/test_ur_robot.py --robot-ip 192.168.0.10
 python tests/test_apriltag_detection.py
 ```
 
-## 📱 Usage
+## 📱 Core Workflows
 
-### Simple Photo Capture
+### 1. Camera Capture
 
 ```python
 from camera.picam.picam import PiCam, PiCamConfig
 
-# Load config and capture photo (note: updated filename)
+# Load config and capture photo
 config = PiCamConfig.from_yaml("camera_client_config.yaml")
 cam = PiCam(config)
 photo_path = cam.capture_photo()
@@ -78,14 +77,48 @@ if photo_path:
     print(f"Photo saved: {photo_path}")
 ```
 
-### Robot Vision Workflow
+### 2. AprilTag Detection
 
 ```python
-# Full workflow with AprilTag detection
-python tests/test_robot_vision.py
+from apriltag_detection import AprilTagDetector
+
+# Initialize detector
+detector = AprilTagDetector(
+    tag_family='tag36h11',
+    tag_size=0.023,  # 23mm tags
+    camera_calibration_file='camera_calibration/camera_calibration.yaml'
+)
+
+# Detect tags in image
+import cv2
+image = cv2.imread('photo.jpg')
+detections = detector.detect_tags(image)
+
+for detection in detections:
+    print(f"Tag {detection['tag_id']} at distance {detection['distance']:.3f}m")
+    print(f"Position: {detection['pose']['tvec']}")
+    print(f"Orientation: {detection['pose']['rvec']}")
 ```
 
-### Camera Calibration
+### 3. Robot Control
+
+```python
+from robots.ur.ur_robot_interface import URRobotInterface
+
+# Connect to robot
+robot = URRobotInterface('192.168.0.10')
+
+# Get current pose
+current_pose = robot.get_tcp_pose()
+print(f"TCP Position: {current_pose[:3]}")
+
+# Move to new position (relative)
+new_pose = current_pose.copy()
+new_pose[2] += 0.1  # Move up 10cm
+robot.move_to_pose(new_pose)
+```
+
+### 4. Camera Calibration
 
 For accurate AprilTag pose estimation:
 
@@ -94,27 +127,15 @@ For accurate AprilTag pose estimation:
 # Use: camera_calibration/Calibration chessboard (US Letter).pdf
 # Print at 100% scale, mount on rigid surface
 
-# 2. Capture 10 calibration photos
+# 2. Capture 10+ calibration photos
 cd camera_calibration
-python camera_calibration/capture_calibration_photos.py
+python capture_calibration_photos.py
 
-# 3. Calculate camera intrinsics from photos
-python camera_calibration/calculate_camera_intrinsics.py
+# 3. Calculate camera intrinsics
+python calculate_camera_intrinsics.py
 
-# This creates camera_calibration.yaml in the camera_calibration directory
-```
-
-### AprilTag Detection
-
-```bash
-# Single detection with pose estimation
-python tests/test_apriltag_detection.py
-
-# Continuous detection mode
-python tests/test_apriltag_detection.py --continuous
-
-# Custom tag size (measure your printed tags in mm)
-python tests/test_apriltag_detection.py --tag-size 50.0
+# 4. Verify calibration quality
+# Check camera_calibration.yaml for low reprojection error (<0.5 pixels)
 ```
 
 ## 📁 File Structure
@@ -151,20 +172,13 @@ robot_system_tools/
 │   ├── Calibration chessboard (US Letter).pdf  # Chessboard pattern
 │   ├── QUALITY_GUIDE.md               # Quality metrics guide
 │   └── README.md                      # Calibration documentation
-├── handeye_calibration/             # Hand-eye calibration for robots
-│   ├── collect_handeye_data.py      # Data collection for UR robots
-│   ├── calculate_handeye_calibration.py  # Solve calibration problem
-│   ├── coordinate_transformer.py    # Runtime coordinate transformation
-│   └── README.md                    # Hand-eye calibration guide
-├── client_config.yaml               # Client configuration
+├── camera_client_config.yaml        # Client configuration
 └── README.md                        # This file
 ```
 
-## 🤖 Robot Integration
+## 🤖 Robot Vision Workflow
 
-### AprilTag Pick and Place Workflow
-
-For complete robot manipulation with AprilTag-based object detection:
+### Complete AprilTag Detection and Robot Control
 
 #### 1. Camera Server Setup
 On your Raspberry Pi:
@@ -173,12 +187,10 @@ curl -sSL https://raw.githubusercontent.com/kelvinchow23/robot_system_tools/mast
 ```
 
 #### 2. Test Camera Connection
-Edit `client_config.yaml` with your Pi's IP address, then test:
+Edit `camera_client_config.yaml` with your Pi's IP address, then test:
 ```bash
-cd tests
-python test_camera_capture.py
+python tests/test_camera_capture.py
 ```
-This establishes connection and verifies you can capture photos.
 
 #### 3. Camera Calibration
 ```bash
@@ -186,81 +198,96 @@ cd camera_calibration
 python capture_calibration_photos.py
 python calculate_camera_intrinsics.py
 ```
-This creates `camera_calibration.yaml` with camera intrinsic parameters needed for accurate pose estimation.
+This creates `camera_calibration.yaml` with camera intrinsic parameters for accurate pose estimation.
 
-#### 4. AprilTag Detection Testing
-Place an AprilTag in camera view and test detection:
+#### 4. AprilTag Detection
 ```bash
-cd tests
-python test_apriltag_detection.py --camera-config ../client_config.yaml
+python tests/test_apriltag_detection.py
 ```
-Verify the tag is detected and distance measurements are roughly expected.
+Test AprilTag detection and pose estimation with your calibrated camera.
 
-#### 5. Hand-Eye Calibration
-```bash
-cd handeye_calibration
-python collect_handeye_data.py --robot-ip 192.168.0.10  # Use your robot's IP
-python calculate_handeye_calibration.py --input handeye_data_*.json
-```
-Note: Robot IP is passed as command argument (not in YAML file currently).
-This creates `handeye_calibration_YYYYMMDD_HHMMSS.yaml` with camera-to-robot transformation for deployment.
-
-#### 6. Network Configuration
-- **Robot + Laptop**: Same subnet (e.g., 192.168.0.x)
-- **Pi Camera + Laptop**: Same subnet (configure in `client_config.yaml`)  
-- **Robot + Pi Camera**: Different subnets OK
-
-#### 7. Grasp Teaching and Deployment
-- Attach AprilTags to objects
-- Teach grasp poses relative to tags using freedrive
-- Deploy pick-and-place with automatic pose transformation
-
-### Hand-Eye Calibration for UR Robots
-
-For robot manipulation applications, perform hand-eye calibration to transform camera coordinates to robot base frame:
-
-```bash
-# Step 1: Collect calibration data
-cd handeye_calibration
-python handeye_calibration/collect_handeye_data.py --robot-ip 192.168.1.100 --auto-poses
-
-# Step 2: Calculate hand-eye transformation
-python handeye_calibration/calculate_handeye_calibration.py --input handeye_data_*.json --validate
-
-# Step 3: Use for coordinate transformation
-python handeye_calibration/coordinate_transformer.py --calibration handeye_calibration_*.yaml
-```
-
-### Runtime Robot Vision
-
+#### 5. Robot Integration
 ```python
-from ur_robot_interface import URRobotInterface
-from handeye_calibration.coordinate_transformer import CoordinateTransformer
+# Complete robot vision workflow
+from robots.ur.ur_robot_interface import URRobotInterface
+from camera.picam.picam import PiCam, PiCamConfig
+from apriltag_detection import AprilTagDetector
 
-# Initialize robot and transformer
-robot = URRobotInterface('192.168.1.100')
-transformer = CoordinateTransformer('handeye_calibration.yaml')
-
-# Detect AprilTag and transform to robot coordinates
-current_robot_pose = robot.get_tcp_pose()
-robot_detection = transformer.transform_apriltag_detection(
-    apriltag_detection, current_robot_pose
+# Initialize systems
+robot = URRobotInterface('192.168.0.10')
+camera = PiCam(PiCamConfig.from_yaml('camera_client_config.yaml'))
+detector = AprilTagDetector(
+    tag_family='tag36h11',
+    tag_size=0.023,
+    camera_calibration_file='camera_calibration/camera_calibration.yaml'
 )
 
-# Get tag position in robot base frame
-tag_position = robot_detection['robot_frame_pose']['translation_vector']
+# Capture and analyze
+photo_path = camera.capture_photo()
+image = cv2.imread(photo_path)
+detections = detector.detect_tags(image)
+
+# Use detection results for robot control
+for detection in detections:
+    print(f"AprilTag {detection['tag_id']} detected")
+    print(f"Distance: {detection['distance']:.3f}m")
+    print(f"Position: {detection['pose']['tvec']}")
+    # Implement your robot control logic here
 ```
 
-See `handeye_calibration/README.md` for detailed instructions.
+## 🔧 Configuration
 
-## ⚙️ Configuration
+### Network Setup
+- **Robot + Laptop**: Same subnet (e.g., 192.168.0.x)
+- **Pi Camera + Laptop**: Same subnet (configure in `camera_client_config.yaml`)
 
-### Server Config (`pi_cam_server/camera_config.yaml`)
-- Camera settings (resolution, rotation, format)
-- Server port and directories
-- Image quality settings
+### AprilTag Settings
+- Default: tag36h11 family, 23mm size
+- Customize in detection code for your specific tags
+- Ensure tags are printed at exact scale for accurate pose estimation  
+- **Robot + Pi Camera**: Different subnets OK
 
-### Client Config (`client_config.yaml`)
+## 💻 Dependencies
+
+```bash
+# Main dependencies (installed by setup_venv.sh)
+pip install opencv-python numpy scipy ur-rtde requests pyyaml pupil-apriltags
+```
+
+### Development Tools
+```bash
+# Additional development dependencies
+pip install pytest black flake8 mypy
+```
+
+## 🛠️ Troubleshooting
+
+### Camera Connection Issues
+- Verify Pi IP address in `camera_client_config.yaml`
+- Check network connectivity: `ping <pi-ip>`
+- Ensure camera server is running on Pi: `systemctl status camera-server`
+
+### AprilTag Detection Issues
+- Ensure camera is calibrated (`camera_calibration.yaml` exists)
+- Verify tag size matches physical measurement
+- Check lighting conditions and tag visibility
+- Use `--continuous` mode for real-time debugging
+
+### Robot Connection Issues
+- Verify robot IP address
+- Check robot is in remote control mode
+- Ensure robot safety system is active
+- Test with minimal robot movements first
+
+## 📚 Documentation
+
+- [`camera_calibration/README.md`](camera_calibration/README.md) - Camera calibration guide
+- [`documentation/ARCHITECTURE.md`](documentation/ARCHITECTURE.md) - System architecture
+- [`pi_cam_server/README.md`](pi_cam_server/README.md) - Pi camera server setup
+
+## 🤝 Contributing
+
+See [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for development practices and coding standards.
 ```yaml
 server:
   host: "192.168.1.100"  # Your Pi's IP

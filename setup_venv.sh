@@ -1,7 +1,7 @@
 #!/bin/bash
 # Robot System Tools - Complete Virtual Environment Setup
 # This script creates a Python virtual environment and installs ALL dependencies
-# for the complete robot vision system (cameras, robots, AprilTags, hand-eye calibration)
+# for the complete robot vision system (cameras, robots, AprilTags)
 
 set -e  # Exit on any error
 
@@ -15,7 +15,6 @@ echo "Installing dependencies for:"
 echo "  - UR Robot control (RTDE)"
 echo "  - Camera systems (OpenCV, Pi Camera)"  
 echo "  - AprilTag detection"
-echo "  - Hand-eye calibration"
 echo "  - Development tools"
 echo ""
 

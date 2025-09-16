@@ -108,7 +108,6 @@ class URRobotInterface:
             np.array: [x, y, z, rx, ry, rz] in meters and radians
         """
         pose = np.array(self.rtde_r.getActualTCPPose())
-        # No sign corrections needed - raw RTDE matches teach pendant
         return pose
     
     def get_joint_positions(self):
@@ -119,6 +118,57 @@ class URRobotInterface:
             np.array: Joint angles in radians
         """
         return np.array(self.rtde_r.getActualQ())
+    
+    def joints_to_pose(self, joint_positions):
+        """
+        Convert joint positions to TCP pose (forward kinematics)
+        
+        Args:
+            joint_positions: Joint angles in radians [j0, j1, j2, j3, j4, j5]
+            
+        Returns:
+            np.array: TCP pose [x, y, z, rx, ry, rz] in meters and radians
+        """
+        if self.rtde_c is None:
+            print("❌ Forward kinematics requires control interface (read_only=False)")
+            return None
+            
+        try:
+            pose = np.array(self.rtde_c.getForwardKinematics(joint_positions.tolist()))
+            return pose
+        except Exception as e:
+            print(f"❌ Forward kinematics failed: {e}")
+            return None
+    
+    def pose_to_joints(self, pose, current_joints=None):
+        """
+        Convert TCP pose to joint positions (inverse kinematics)
+        
+        Args:
+            pose: TCP pose [x, y, z, rx, ry, rz] in meters and radians
+            current_joints: Current joint positions for closest solution (optional)
+            
+        Returns:
+            np.array: Joint angles in radians, or None if no solution
+        """
+        if self.rtde_c is None:
+            print("❌ Inverse kinematics requires control interface (read_only=False)")
+            return None
+            
+        try:
+            if current_joints is None:
+                current_joints = self.get_joint_positions()
+            
+            joints = self.rtde_c.getInverseKinematics(pose.tolist(), current_joints.tolist())
+            
+            if joints is None:
+                print("❌ No inverse kinematics solution found")
+                return None
+                
+            return np.array(joints)
+        except Exception as e:
+            print(f"❌ Inverse kinematics failed: {e}")
+            return None
     
     def move_to_pose(self, pose, speed=None, acceleration=None, wait=True):
         """

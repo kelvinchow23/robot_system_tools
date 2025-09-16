@@ -14,9 +14,6 @@ pupil-apriltags>=1.0.4
 scipy>=1.7.0
 matplotlib>=3.5.0
 
-# Hand-eye calibration
-transforms3d>=0.4.1
-
 # Camera system (Pi only - install separately on Pi)
 # picamera2  # Install on Pi: pip install picamera2
 

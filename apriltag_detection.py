@@ -26,20 +26,20 @@ except ImportError:
 class AprilTagDetector:
     """AprilTag detection and pose estimation"""
     
-    def __init__(self, tag_family='tag36h11', tag_size_mm=23.0, calibration_file=None):
+    def __init__(self, tag_family='tag36h11', tag_size=0.023, calibration_file=None):
         """
         Initialize AprilTag detector
         
         Args:
             tag_family: AprilTag family (tag36h11, tag25h9, etc.)
-            tag_size_mm: Physical size of AprilTag in millimeters
+            tag_size: Physical size of AprilTag (default: 0.023 for 23mm tags)
             calibration_file: Path to camera calibration YAML file
         """
         if not APRILTAG_AVAILABLE:
             raise ImportError("pupil-apriltags library not installed")
         
         self.tag_family = tag_family
-        self.tag_size_mm = tag_size_mm
+        self.tag_size = tag_size
         
         # Initialize detector
         # pupil-apriltags expects families as a string, not a list
@@ -106,6 +106,7 @@ class AprilTagDetector:
                 'hamming': tag.hamming,
                 'decision_margin': tag.decision_margin,
                 'pose': None,
+                'distance': None,
                 'distance_mm': None
             }
             
@@ -120,7 +121,8 @@ class AprilTagDetector:
                     # Calculate distance (translation magnitude)
                     tvec = pose['translation_vector']
                     distance = np.linalg.norm(tvec)
-                    result['distance_mm'] = float(distance)
+                    result['distance'] = float(distance)
+                    result['distance_mm'] = float(distance * 1000)  # For display compatibility
             
             results.append(result)
         
@@ -141,7 +143,7 @@ class AprilTagDetector:
         
         # Define 3D object points for AprilTag corners
         # Standard AprilTag: corners at +/-0.5 * tag_size from center
-        half_size = self.tag_size_mm / 2.0
+        half_size = self.tag_size / 2.0
         object_points = np.array([
             [-half_size, -half_size, 0],  # Top-left
             [ half_size, -half_size, 0],  # Top-right
