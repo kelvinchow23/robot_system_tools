@@ -13,67 +13,28 @@ import os
 from pathlib import Path
 from scipy.spatial.transform import Rotation as R
 
+# Import centralized configuration
+import sys
+sys.path.append(str(Path(__file__).parent.parent.parent))
+from config_manager import config
+
 class URRobotInterface:
     """Universal Robots interface using RTDE"""
     
-    @staticmethod
-    def load_robot_config(config_file="robot_config.yaml"):
-        """
-        Load robot configuration from YAML file
-        
-        Args:
-            config_file: Path to robot config file
-            
-        Returns:
-            dict: Robot configuration
-        """
-        # Get the directory where this script is located
-        script_dir = Path(__file__).parent
-        config_path = script_dir / config_file
-        
-        if not config_path.exists():
-            print(f"⚠️  Config file {config_path} not found, using defaults")
-            return {
-                'robot': {
-                    'ip_address': '192.168.0.10',
-                    'default_speed': 0.05,
-                    'default_acceleration': 0.2
-                }
-            }
-        
-        try:
-            with open(config_path, 'r') as f:
-                config = yaml.safe_load(f)
-            return config
-        except Exception as e:
-            print(f"⚠️  Error loading config file: {e}, using defaults")
-            return {
-                'robot': {
-                    'ip_address': '192.168.0.10',
-                    'default_speed': 0.05,
-                    'default_acceleration': 0.2
-                }
-            }
-    
-    def __init__(self, robot_ip=None, speed=None, acceleration=None, read_only=False, config_file="robot_config.yaml"):
+    def __init__(self, robot_ip=None, speed=None, acceleration=None, read_only=False):
         """
         Initialize UR robot interface
         
         Args:
-            robot_ip: IP address of UR robot (overrides config file if provided)
-            speed: Default linear speed (m/s) (overrides config file if provided)
-            acceleration: Default acceleration (m/s²) (overrides config file if provided)
+            robot_ip: IP address of UR robot (overrides config if provided)
+            speed: Default linear speed (m/s) (overrides config if provided)
+            acceleration: Default acceleration (m/s²) (overrides config if provided)
             read_only: If True, only connect receive interface (no remote control needed)
-            config_file: Path to robot configuration YAML file
         """
-        # Load configuration
-        config = self.load_robot_config(config_file)
-        robot_config = config.get('robot', {})
-        
-        # Use provided values or fall back to config file, then defaults
-        self.robot_ip = robot_ip or robot_config.get('ip_address', '192.168.0.10')
-        self.speed = speed or robot_config.get('default_speed', 0.05)
-        self.acceleration = acceleration or robot_config.get('default_acceleration', 0.2)
+        # Use provided values or fall back to centralized config
+        self.robot_ip = robot_ip or config.get('robot.ip_address', '192.168.0.10')
+        self.speed = speed or config.get('robot.default_speed', 0.05)
+        self.acceleration = acceleration or config.get('robot.default_acceleration', 0.2)
         self.read_only = read_only
         
         print(f"🤖 Connecting to UR robot at {self.robot_ip}...")
@@ -96,9 +57,9 @@ class URRobotInterface:
     
     def set_calibration_speed(self):
         """Set safe speeds for calibration movements to prevent protective stop"""
-        self.speed = 0.02  # Safe: 20mm/s
-        self.acceleration = 0.1  # Minimum acceptable: 100mm/s²
-        print("🐌 Calibration speeds set: 20mm/s, 100mm/s²")
+        self.speed = config.get('robot.calibration_speed', 0.02)  # Safe: 20mm/s
+        self.acceleration = config.get('robot.calibration_acceleration', 0.1)  # Minimum acceptable: 100mm/s²
+        print(f"🐌 Calibration speeds set: {self.speed*1000:.0f}mm/s, {self.acceleration*1000:.0f}mm/s²")
     
     def get_tcp_pose(self):
         """
@@ -266,18 +227,23 @@ class URRobotInterface:
         
         return np.concatenate([translation, rotation_vector])
     
-    def is_at_pose(self, target_pose, position_tolerance=0.001, rotation_tolerance=0.01):
+    def is_at_pose(self, target_pose, position_tolerance=None, rotation_tolerance=None):
         """
         Check if robot is at target pose within tolerance
         
         Args:
             target_pose: Target pose [x, y, z, rx, ry, rz]
-            position_tolerance: Position tolerance in meters
-            rotation_tolerance: Rotation tolerance in radians
+            position_tolerance: Position tolerance in meters (uses config default if None)
+            rotation_tolerance: Rotation tolerance in radians (uses config default if None)
             
         Returns:
             bool: True if at target pose
         """
+        if position_tolerance is None:
+            position_tolerance = config.get('robot.position_tolerance', 0.001)
+        if rotation_tolerance is None:
+            rotation_tolerance = config.get('robot.rotation_tolerance', 0.01)
+            
         current_pose = self.get_tcp_pose()
         
         position_diff = np.linalg.norm(current_pose[:3] - target_pose[:3])
@@ -348,8 +314,8 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='UR Robot Interface Test')
-    parser.add_argument('--robot-ip', default='192.168.1.100',
-                       help='Robot IP address')
+    parser.add_argument('--robot-ip', default=None,
+                       help='Robot IP address (overrides config)')
     parser.add_argument('--test-move', action='store_true',
                        help='Perform small test movement')
     
@@ -359,7 +325,10 @@ def main():
     print("=" * 50)
     
     try:
-        with URRobotInterface(args.robot_ip) as robot:
+        # Use config file IP if no override provided
+        robot_ip = args.robot_ip or config.get('robot.ip_address', '192.168.0.10')
+        
+        with URRobotInterface(robot_ip) as robot:
             if not robot.test_connection():
                 return
             

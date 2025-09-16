@@ -12,6 +12,11 @@ from datetime import datetime
 import time
 import sys
 import os
+from pathlib import Path
+
+# Import centralized configuration
+from config_manager import config, get_apriltag_family, get_apriltag_size, get_camera_calibration_file
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'camera', 'picam'))
 from picam import PiCam, PiCamConfig
 
@@ -26,20 +31,33 @@ except ImportError:
 class AprilTagDetector:
     """AprilTag detection and pose estimation"""
     
-    def __init__(self, tag_family='tag36h11', tag_size=0.023, calibration_file=None):
+    def __init__(self, tag_family=None, tag_size=None, calibration_file=None):
         """
         Initialize AprilTag detector
         
         Args:
-            tag_family: AprilTag family (tag36h11, tag25h9, etc.)
-            tag_size: Physical size of AprilTag (default: 0.023 for 23mm tags)
-            calibration_file: Path to camera calibration YAML file
+            tag_family: AprilTag family (overrides config if provided)
+            tag_size: Physical size of AprilTag in meters (overrides config if provided)
+            calibration_file: Path to camera calibration YAML file (overrides config if provided)
         """
         if not APRILTAG_AVAILABLE:
             raise ImportError("pupil-apriltags library not installed")
         
-        self.tag_family = tag_family
-        self.tag_size = tag_size
+        # Use provided values or fall back to centralized config
+        self.tag_family = tag_family or get_apriltag_family()
+        self.tag_size = tag_size or get_apriltag_size()
+        
+        # Determine calibration file path
+        if calibration_file is None:
+            self.calibration_file = get_camera_calibration_file()
+        else:
+            self.calibration_file = Path(calibration_file)
+            if not self.calibration_file.is_absolute():
+                # Resolve relative paths from project root
+                self.calibration_file = config.resolve_path(calibration_file)
+        
+        print(f"🏷️  AprilTag Detector: {self.tag_family}, size={self.tag_size}m")
+        print(f"📹 Camera calibration: {self.calibration_file}")
         
         # Initialize detector
         # pupil-apriltags expects families as a string, not a list
@@ -256,17 +274,13 @@ class AprilTagDetector:
 
 def main():
     parser = argparse.ArgumentParser(description='AprilTag Detection and Pose Estimation')
-    parser.add_argument('--config', default='client_config.yaml',
-                       help='Pi camera config file')
-    parser.add_argument('--host', help='Camera server hostname/IP (overrides config file)')
-    parser.add_argument('--port', type=int, default=2222, help='Camera server port (default: 2222)')
-    parser.add_argument('--calibration', default='camera_calibration/camera_calibration.yaml',
-                       help='Camera calibration file')
-    parser.add_argument('--tag-family', default='tag36h11',
-                       choices=['tag36h11', 'tag25h9', 'tag16h5'],
-                       help='AprilTag family')
-    parser.add_argument('--tag-size', type=float, default=23.0,
-                       help='AprilTag size in millimeters')
+    parser.add_argument('--host', help='Camera server hostname/IP (overrides config)')
+    parser.add_argument('--port', type=int, help='Camera server port (overrides config)')
+    parser.add_argument('--calibration', help='Camera calibration file (overrides config)')
+    parser.add_argument('--tag-family', choices=['tag36h11', 'tag25h9', 'tag16h5'],
+                       help='AprilTag family (overrides config)')
+    parser.add_argument('--tag-size', type=float,
+                       help='AprilTag size in millimeters (overrides config)')
     parser.add_argument('--save-detections', action='store_true',
                        help='Save images with detections')
     parser.add_argument('--continuous', action='store_true',
@@ -282,14 +296,22 @@ def main():
     
     # Load camera config and connect
     print("📡 Connecting to Pi camera...")
-    if args.host:
-        print(f"🔗 Using command-line arguments: {args.host}:{args.port}")
-        # Create config object with command-line arguments
-        config = PiCamConfig(hostname=args.host, port=args.port)
-        camera = PiCam(config)
+    if args.host or args.port:
+        # Use command-line arguments with config fallbacks
+        host = args.host or config.get('camera.server.host')
+        port = args.port or config.get('camera.server.port')
+        print(f"🔗 Using: {host}:{port}")
+        # Create config object with arguments/config
+        camera_config = PiCamConfig(hostname=host, port=port)
+        camera = PiCam(camera_config)
     else:
-        config = PiCamConfig.from_yaml(args.config)
-        camera = PiCam(config)
+        # Use configuration file values
+        host = config.get('camera.server.host')
+        port = config.get('camera.server.port')
+        timeout = config.get('camera.server.timeout', 10)
+        print(f"🔗 Using config: {host}:{port}")
+        camera_config = PiCamConfig(hostname=host, port=port, timeout=timeout)
+        camera = PiCam(camera_config)
     
     if not camera.test_connection():
         print("❌ Failed to connect to camera server")
@@ -297,16 +319,20 @@ def main():
     
     print("✅ Connected to camera server")
     
-    # Initialize detector
+    # Initialize detector with config/argument values
+    tag_family = args.tag_family or get_apriltag_family()
+    tag_size_mm = args.tag_size or (get_apriltag_size() * 1000)  # Convert m to mm
+    calibration_file = args.calibration or get_camera_calibration_file()
+    
     detector = AprilTagDetector(
-        tag_family=args.tag_family,
-        tag_size_mm=args.tag_size,
-        calibration_file=args.calibration
+        tag_family=tag_family,
+        tag_size=tag_size_mm / 1000.0,  # Convert mm to m
+        calibration_file=calibration_file
     )
     
     print(f"🏷️  Detector initialized:")
-    print(f"   Family: {args.tag_family}")
-    print(f"   Tag size: {args.tag_size}mm")
+    print(f"   Family: {tag_family}")
+    print(f"   Tag size: {tag_size_mm}mm")
     print(f"   Pose estimation: {'✅' if detector.pose_estimation_enabled else '❌'}")
     print("")
     

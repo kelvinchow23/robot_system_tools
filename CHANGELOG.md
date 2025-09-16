@@ -4,17 +4,41 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Unified configuration system with central `config.yaml` file in project root
+- `config_manager.py` module for centralized configuration access
+- Configuration guide in `documentation/CONFIGURATION_GUIDE.md`
+- Support for environment-based configuration overrides
+- Path resolution utilities for robust file path handling
+- Convenience functions for common configuration access patterns
+
+### Changed
+- Updated `robots/ur/ur_robot_interface.py` to use centralized configuration
+- Updated `apriltag_detection.py` to use centralized configuration  
+- All modules now import from `config_manager` instead of individual config files
+- Configuration values now support dot notation access (e.g., `robot.ip_address`)
+- Command-line arguments now override config file values consistently
+
+### Improved
+- Simplified configuration management - single source of truth
+- Better path handling - no more broken references when moving files
+- Consistent configuration access patterns across all modules
+- Built-in defaults and graceful fallbacks
+- Configuration validation and debugging capabilities
+
 ### Removed
 - handeye_calibration/ directory and all hand-eye calibration scripts: collect_handeye_data.py, calculate_handeye_calibration.py, coordinate_transformer.py, etc.
 - handeye_rework/ directory and experimental calibration approaches
 - Hand-eye calibration related files from root: handeye_result.yaml, handeye_samples.json, analyze_motion.py, check_distances.py, test_close_distance.py
 - Hand-eye calibration sections from README.md, simplified to focus on pure AprilTag detection workflow
+- Individual config files (`camera_client_config.yaml`, `robots/ur/robot_config.yaml`) - now consolidated
 
 ### Rationale
-- Hand-eye calibration was not producing realistic reslts
+- Hand-eye calibration was not producing realistic results
 - AprilTag detection works effectively without requiring camera-to-robot transformation
 - Simplified codebase focuses on core functionality: camera capture, AprilTag detection, and robot control as separate components
 - handeye_rework/collect_samples.py: implemented real robot/camera/apriltag hooks using existing interfaces
+- Configuration consolidation eliminates path issues and simplifies system management
 
 ## [2025-09-12] - Camera Coordinate Frame Correction for Hand-Eye Calibration
 

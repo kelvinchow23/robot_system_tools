@@ -26,7 +26,32 @@ This installs dependencies for:
 - AprilTag detection
 - Development tools
 
-### 2. Pi Camera Server Setup (One Command)
+### 2. Configuration
+
+**Configure the system using the unified configuration file** `config.yaml`:
+
+```yaml
+# Robot Configuration
+robot:
+  ip_address: "192.168.0.10"  # Your UR robot IP
+  default_speed: 0.03
+  default_acceleration: 0.08
+
+# Camera Configuration  
+camera:
+  server:
+    host: "192.168.1.100"  # Your Pi camera IP
+    port: 2222
+
+# AprilTag Configuration
+apriltag:
+  family: "tag36h11"
+  tag_size: 0.023  # 23mm tags
+```
+
+See [`documentation/CONFIGURATION_GUIDE.md`](documentation/CONFIGURATION_GUIDE.md) for complete configuration options.
+
+### 3. Pi Camera Server Setup (One Command)
 
 On your Raspberry Pi, run:
 ```bash
@@ -40,9 +65,9 @@ This will:
 - Enable auto-start on boot
 - Start the service immediately
 
-### 3. Client Setup
+### 4. Client Setup
 
-After setting up the virtual environment:
+After setting up the virtual environment and configuration:
 
 ```bash
 # Activate environment (if not already active)
