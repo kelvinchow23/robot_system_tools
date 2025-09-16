@@ -43,17 +43,14 @@ class AprilTagDetector:
         if not APRILTAG_AVAILABLE:
             raise ImportError("pupil-apriltags library not installed")
         
-        # Use provided values or fall back to centralized config
         self.tag_family = tag_family or get_apriltag_family()
         self.tag_size = tag_size or get_apriltag_size()
         
-        # Determine calibration file path
         if calibration_file is None:
             self.calibration_file = get_camera_calibration_file()
         else:
             self.calibration_file = Path(calibration_file)
             if not self.calibration_file.is_absolute():
-                # Resolve relative paths from project root
                 self.calibration_file = config.resolve_path(calibration_file)
         
         print(f"🏷️  AprilTag Detector: {self.tag_family}, size={self.tag_size}m")
@@ -294,18 +291,14 @@ def main():
     if not APRILTAG_AVAILABLE:
         return
     
-    # Load camera config and connect
     print("📡 Connecting to Pi camera...")
     if args.host or args.port:
-        # Use command-line arguments with config fallbacks
         host = args.host or config.get('camera.server.host')
         port = args.port or config.get('camera.server.port')
         print(f"🔗 Using: {host}:{port}")
-        # Create config object with arguments/config
         camera_config = PiCamConfig(hostname=host, port=port)
         camera = PiCam(camera_config)
     else:
-        # Use configuration file values
         host = config.get('camera.server.host')
         port = config.get('camera.server.port')
         timeout = config.get('camera.server.timeout', 10)

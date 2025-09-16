@@ -29,16 +29,9 @@ class ConfigManager:
     
     @staticmethod
     def find_project_root():
-        """
-        Find project root by looking for marker files
-        
-        Returns:
-            Path: Project root directory
-        """
-        # Start from current file location
+        """Find project root by looking for marker files"""
         current = Path(__file__).parent
         
-        # Look for known project files to identify root
         marker_files = ['config.yaml', 'apriltag_detection.py', 'README.md']
         
         while current != current.parent:
@@ -46,53 +39,32 @@ class ConfigManager:
                 return current
             current = current.parent
         
-        # Fallback to current directory
         return Path(__file__).parent
     
     def get_config_path(self, config_file: str = "config.yaml") -> Path:
-        """
-        Get path to configuration file
-        
-        Args:
-            config_file: Name of config file
-            
-        Returns:
-            Path: Full path to config file
-        """
-        # Check environment variable first
+        """Get path to configuration file"""
         if 'ROBOT_TOOLS_CONFIG' in os.environ:
             config_path = Path(os.environ['ROBOT_TOOLS_CONFIG'])
             if config_path.exists():
                 return config_path
         
-        # Check project root
         project_root = self.find_project_root()
         config_path = project_root / config_file
         
         if config_path.exists():
             return config_path
         
-        # Fallback to default in same directory as this script
         fallback_path = Path(__file__).parent / config_file
         return fallback_path
     
     def load_config(self, config_file: str = "config.yaml") -> Dict[str, Any]:
-        """
-        Load configuration from YAML file
-        
-        Args:
-            config_file: Name of config file to load
-            
-        Returns:
-            dict: Configuration dictionary
-        """
+        """Load configuration from YAML file"""
         config_path = self.get_config_path(config_file)
         
         try:
             with open(config_path, 'r') as f:
                 config = yaml.safe_load(f)
             
-            # Store project root in config for path resolution
             config['_project_root'] = self.find_project_root()
             
             print(f"✅ Loaded configuration from: {config_path}")
@@ -109,12 +81,7 @@ class ConfigManager:
             return self.get_default_config()
     
     def get_default_config(self) -> Dict[str, Any]:
-        """
-        Get default configuration if config file is not available
-        
-        Returns:
-            dict: Default configuration
-        """
+        """Get default configuration if config file is not available"""
         return {
             'system': {
                 'name': 'Robot System Tools',
@@ -150,21 +117,7 @@ class ConfigManager:
         self._config = self.load_config(config_file)
     
     def get(self, key_path: str, default: Any = None) -> Any:
-        """
-        Get configuration value using dot notation
-        
-        Args:
-            key_path: Dot-separated path to config value (e.g., 'robot.ip_address')
-            default: Default value if key not found
-            
-        Returns:
-            Configuration value or default
-            
-        Examples:
-            config.get('robot.ip_address')
-            config.get('camera.server.host')
-            config.get('apriltag.tag_size')
-        """
+        """Get configuration value using dot notation"""
         if self._config is None:
             self.reload_config()
         
@@ -179,27 +132,11 @@ class ConfigManager:
             return default
     
     def get_section(self, section: str) -> Dict[str, Any]:
-        """
-        Get entire configuration section
-        
-        Args:
-            section: Section name (e.g., 'robot', 'camera', 'apriltag')
-            
-        Returns:
-            dict: Configuration section
-        """
+        """Get entire configuration section"""
         return self.get(section, {})
     
     def resolve_path(self, relative_path: str) -> Path:
-        """
-        Resolve relative path to absolute path based on project root
-        
-        Args:
-            relative_path: Path relative to project root
-            
-        Returns:
-            Path: Absolute path
-        """
+        """Resolve relative path to absolute path based on project root"""
         project_root = self.get('_project_root')
         return project_root / relative_path
     
@@ -220,12 +157,7 @@ class ConfigManager:
         return self.get_section('paths')
     
     def print_config(self, section: Optional[str] = None):
-        """
-        Print configuration (for debugging)
-        
-        Args:
-            section: Specific section to print, or None for all
-        """
+        """Print configuration for debugging"""
         if section:
             config_to_print = self.get_section(section)
             print(f"\n📋 Configuration section '{section}':")
@@ -239,7 +171,6 @@ class ConfigManager:
 # Global configuration instance
 config = ConfigManager()
 
-# Convenience functions for common access patterns
 def get_robot_ip() -> str:
     """Get robot IP address"""
     return config.get('robot.ip_address', '192.168.0.10')

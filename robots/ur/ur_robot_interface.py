@@ -31,7 +31,6 @@ class URRobotInterface:
             acceleration: Default acceleration (m/s²) (overrides config if provided)
             read_only: If True, only connect receive interface (no remote control needed)
         """
-        # Use provided values or fall back to centralized config
         self.robot_ip = robot_ip or config.get('robot.ip_address', '192.168.0.10')
         self.speed = speed or config.get('robot.default_speed', 0.05)
         self.acceleration = acceleration or config.get('robot.default_acceleration', 0.2)
@@ -57,8 +56,8 @@ class URRobotInterface:
     
     def set_calibration_speed(self):
         """Set safe speeds for calibration movements to prevent protective stop"""
-        self.speed = config.get('robot.calibration_speed', 0.02)  # Safe: 20mm/s
-        self.acceleration = config.get('robot.calibration_acceleration', 0.1)  # Minimum acceptable: 100mm/s²
+        self.speed = config.get('robot.calibration_speed', 0.02)
+        self.acceleration = config.get('robot.calibration_acceleration', 0.1)
         print(f"🐌 Calibration speeds set: {self.speed*1000:.0f}mm/s, {self.acceleration*1000:.0f}mm/s²")
     
     def get_tcp_pose(self):
@@ -325,7 +324,6 @@ def main():
     print("=" * 50)
     
     try:
-        # Use config file IP if no override provided
         robot_ip = args.robot_ip or config.get('robot.ip_address', '192.168.0.10')
         
         with URRobotInterface(robot_ip) as robot:
@@ -335,10 +333,9 @@ def main():
             if args.test_move:
                 print("\n🔄 Performing test movement...")
                 
-                # Small relative movement
                 current_pose = robot.get_tcp_pose()
                 test_pose = current_pose.copy()
-                test_pose[2] += 0.01  # Move up 1cm
+                test_pose[2] += 0.01
                 
                 print(f"Moving to: {robot.format_pose(test_pose)}")
                 if robot.move_to_pose(test_pose):

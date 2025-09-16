@@ -5,82 +5,76 @@
 system:
   name: "Robot System Tools"
   version: "1.0"
-  environment: "development"  # development, production, test
-  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  environment: "development"
+  log_level: "INFO"
 
 # Robot Configuration
 robot:
-  type: "UR"  # Robot type (UR, other future robots)
-  ip_address: "192.168.0.10"  # Robot IP address
+  type: "UR"
+  ip_address: "192.168.0.10"
   
   # Movement settings
-  default_speed: 0.03  # Default linear speed (m/s)
-  default_acceleration: 0.08  # Default acceleration (m/s²)
+  default_speed: 0.03
+  default_acceleration: 0.08
   
   # Safety settings
-  position_tolerance: 0.001  # Position tolerance in meters (1mm)
-  rotation_tolerance: 0.01   # Rotation tolerance in radians (~0.57 degrees)
+  position_tolerance: 0.001
+  rotation_tolerance: 0.01
   
-  # Calibration specific speeds (slower for safety)
-  calibration_speed: 0.02  # Safe speed for calibration movements (m/s)
-  calibration_acceleration: 0.1  # Safe acceleration for calibration (m/s²)
+  # Calibration specific speeds
+  calibration_speed: 0.02
+  calibration_acceleration: 0.1
 
 # Camera Configuration
 camera:
-  type: "pi_camera"  # Camera type: pi_camera, usb_camera, etc.
+  type: "pi_camera"
   
-  # Pi Camera Server (for remote camera access)
+  # Pi Camera Server
   server:
-    host: "100.114.26.7"  # Pi camera server IP address
+    host: "100.114.26.7"
     port: 2222
-    timeout: 10  # Connection timeout in seconds
+    timeout: 10
   
   # Local camera settings
   client:
-    download_directory: "photos"  # Where to save captured photos
-    auto_create_dirs: true  # Auto-create directories if they don't exist
+    download_directory: "photos"
+    auto_create_dirs: true
   
   # Camera calibration
   calibration:
-    file: "camera_calibration/camera_calibration.yaml"  # Path to calibration file
-    auto_load: true  # Automatically load calibration on startup
-    required: true  # Require calibration for AprilTag detection
+    file: "camera_calibration/camera_calibration.yaml"
+    auto_load: true
+    required: true
 
 # AprilTag Detection Configuration
 apriltag:
-  family: "tag36h11"  # AprilTag family (tag36h11, tag25h9, etc.)
-  tag_size: 0.023  # Physical tag size in meters (23mm)
+  family: "tag36h11"
+  tag_size: 0.023
   
   # Detection parameters
   detection:
-    max_hamming: 2  # Maximum hamming distance for detection
-    quad_decimate: 2.0  # Decimation factor for quad detection
-    quad_sigma: 0.0  # Gaussian blur for quad detection
-    decode_sharpening: 0.25  # Sharpening for decode
+    max_hamming: 2
+    quad_decimate: 2.0
+    quad_sigma: 0.0
+    decode_sharpening: 0.25
     
   # Pose estimation
   pose:
-    iterations: 100  # Maximum iterations for pose estimation
-    tolerance: 1e-6  # Convergence tolerance
+    iterations: 100
+    tolerance: 1e-6
 
 # Coordinate System Configuration
 coordinates:
-  # Base coordinate frame (robot base)
   robot_base_frame: "robot_base"
-  
-  # Camera coordinate frame
   camera_frame: "camera"
-  
-  # AprilTag coordinate frame
   apriltag_frame: "apriltag"
   
-  # Coordinate system conventions
   conventions:
-    robot: "ROS"  # Robot coordinate convention (ROS, DH, etc.)
-    camera: "opencv"  # Camera coordinate convention (opencv, ros, etc.)
-    apriltag: "opencv"  # AprilTag coordinate convention
+    robot: "ROS"
+    camera: "opencv"
+    apriltag: "opencv"
 
-# File Paths (relative to project root)
+# File Paths
 paths:
   project_root: "."
   config_dir: "."
@@ -106,9 +100,9 @@ debug:
   
 # Safety Limits
 safety:
-  max_tcp_speed: 0.25  # Maximum TCP speed (m/s)
-  max_tcp_acceleration: 1.0  # Maximum TCP acceleration (m/s²)
-  workspace_limits:  # Robot workspace limits in meters
+  max_tcp_speed: 0.25
+  max_tcp_acceleration: 1.0
+  workspace_limits:
     x_min: -0.5
     x_max: 0.5
     y_min: -0.5
