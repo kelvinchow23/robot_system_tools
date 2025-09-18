@@ -9,12 +9,12 @@ import time
 import sys
 import os
 from datetime import datetime
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'robots', 'ur'))
-from ur_robot_interface import URRobotInterface
+sys.path.append(os.path.join(os.path.dirname(__file__), 'robots', 'ur'))
+from robots.ur.ur_controller import URController
 from scipy.spatial.transform import Rotation as R
 
 # Import our rotation utilities
-from rotations_cli import rotvec_to_matrix, rotvec_to_quat
+from archive.rotations_cli import rotvec_to_matrix, rotvec_to_quat
 
 def format_pose_detailed(pose):
     """Format pose with rotation vector, Euler angles, quaternion, and rotation matrix"""
@@ -42,9 +42,8 @@ def format_pose_detailed(pose):
     return result.rstrip()
 
 def format_joints(joints):
-    """Format joint positions in degrees"""
-    joints_deg = np.degrees(joints)
-    return f"[{joints_deg[0]:6.1f}, {joints_deg[1]:6.1f}, {joints_deg[2]:6.1f}, {joints_deg[3]:6.1f}, {joints_deg[4]:6.1f}, {joints_deg[5]:6.1f}] deg"
+    """Format joint positions in radians"""
+    return f"[{joints[0]:6.3f}, {joints[1]:6.3f}, {joints[2]:6.3f}, {joints[3]:6.3f}, {joints[4]:6.3f}, {joints[5]:6.3f}] rad"
 
 def clear_screen():
     """Clear terminal screen"""
@@ -66,7 +65,7 @@ def monitor_robot_live(update_rate=5.0):
     
     try:
         # Connect to robot (read-only)
-        robot = URRobotInterface(read_only=True)
+        robot = URController(read_only=True)
         
         print("\n✅ Connected! Monitoring robot data...")
         print("💡 Try different orientations to see how values change")
@@ -92,7 +91,7 @@ def monitor_robot_live(update_rate=5.0):
                 timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                 
                 # Calculate changes from initial
-                joint_changes = np.degrees(joints - initial_joints)
+                joint_changes = joints - initial_joints
                 pose_changes = pose - initial_pose
                 
                 # Clear and update display
@@ -105,13 +104,13 @@ def monitor_robot_live(update_rate=5.0):
                 print(f"{format_pose_detailed(pose)}")
                 
                 print(f"\n📊 Changes from Initial:")
-                print(f"Joint Δ: [{joint_changes[0]:6.1f}, {joint_changes[1]:6.1f}, {joint_changes[2]:6.1f}, {joint_changes[3]:6.1f}, {joint_changes[4]:6.1f}, {joint_changes[5]:6.1f}] deg")
+                print(f"Joint Δ: [{joint_changes[0]:6.3f}, {joint_changes[1]:6.3f}, {joint_changes[2]:6.3f}, {joint_changes[3]:6.3f}, {joint_changes[4]:6.3f}, {joint_changes[5]:6.3f}] rad")
                 print(f"Position Δ: [{pose_changes[0]:7.4f}, {pose_changes[1]:7.4f}, {pose_changes[2]:7.4f}] m")
                 print(f"RotVec Δ:   [{pose_changes[3]:7.4f}, {pose_changes[4]:7.4f}, {pose_changes[5]:7.4f}] rad")
                 
                 # Calculate angular difference from initial
                 if np.linalg.norm(pose_changes[3:6]) > 1e-6:
-                    from rotations_cli import rotation_angle_between
+                    from archive.rotations_cli import rotation_angle_between
                     angular_diff = rotation_angle_between(initial_pose[3:6], pose[3:6], degrees=True)
                     print(f"Angular Δ:  {angular_diff:.2f} degrees")
                 
@@ -143,7 +142,7 @@ def record_pose_snapshot():
     print("=" * 40)
     
     try:
-        robot = URRobotInterface(read_only=True)
+        robot = URController(read_only=True)
         
         joints = robot.get_joint_positions()
         pose = robot.get_tcp_pose()

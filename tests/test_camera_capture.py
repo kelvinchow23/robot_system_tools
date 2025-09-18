@@ -1,36 +1,47 @@
 #!/usr/bin/env python3
 """
 Simple Pi Camera Test with Config File
-Tests connection and captures a photo using camera_client_config.yaml or command-line arguments
+Tests connection and captures a photo using the centralized config.yaml or command-line arguments
 """
 
 import argparse
 import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'camera', 'picam'))
 from picam import PiCam, PiCamConfig
+import sys
+from pathlib import Path
+
+# Add setup directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "setup"))
+
+from config_manager import get_camera_host, get_camera_port
 
 def main():
     parser = argparse.ArgumentParser(description="Test Pi Camera connection and capture")
     parser.add_argument("--host", help="Camera server hostname/IP (overrides config file)")
-    parser.add_argument("--port", type=int, default=2222, help="Camera server port (default: 2222)")
+    parser.add_argument("--port", type=int, help="Camera server port (overrides config file)")
     args = parser.parse_args()
     
     print("🍓 Pi Camera Client Test")
     print("========================")
     
-    if args.host:
-        # Use command-line arguments
+    if args.host or args.port:
+        # Use command-line arguments (with fallbacks from config)
+        host = args.host or get_camera_host()
+        port = args.port or get_camera_port()
         print(f"📝 Using command-line arguments...")
-        print(f"🔗 Connecting to: {args.host}:{args.port}")
-        # Create config object with command-line arguments
-        config = PiCamConfig(hostname=args.host, port=args.port)
+        print(f"🔗 Connecting to: {host}:{port}")
+        config = PiCamConfig(hostname=host, port=port)
         cam = PiCam(config)
     else:
-        # Load config from file
-        print("📝 Loading config from camera_client_config.yaml...")
-        config = PiCamConfig.from_yaml("camera_client_config.yaml")
-        print(f"🔗 Connecting to: {config.hostname}:{config.port}")
+        # Load config from centralized config.yaml
+        print("📝 Loading config from centralized config.yaml...")
+        host = get_camera_host()
+        port = get_camera_port()
+        print(f"🔗 Connecting to: {host}:{port}")
+        config = PiCamConfig(hostname=host, port=port)
         cam = PiCam(config)
     
     # Test connection
@@ -39,7 +50,7 @@ def main():
         print("✅ Connection successful!")
     else:
         print("❌ Connection failed!")
-        print("   Check your Pi's IP address in camera_client_config.yaml")
+        print("   Check your Pi's IP address in config.yaml")
         print("   Make sure the camera server is running on the Pi")
         return
     

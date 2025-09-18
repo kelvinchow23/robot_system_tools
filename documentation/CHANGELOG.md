@@ -2,41 +2,169 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## [Unreleased]
 
 ### Added
-- Confirmed working UR robot interface with RTDE library (2025-08-26)
-- Robot configuration YAML file for UR robot settings (2025-08-26)
-- Python package structure with __init__.py files for all modules (2025-08-26)
-- Development practices documentation (2025-08-26)
-- UR robot interface with real ur_rtde support (2025-08-25)
-- Hand-eye calibration system for UR robots (2025-08-25)
-- Command-line arguments for camera test scripts (2025-08-25)
-- AprilTag detection with pose estimation (2025-08-25)
-- Camera calibration workflow (2025-08-25)
+- **Comprehensive File Organization** - Moved CHANGELOG.md to documentation/, renamed config/ to setup/, moved requirements.txt and setup_venv.sh to setup/
+- **Enhanced Directory Organization** - Created `positions/` directory for position files and moved teach_positions.py there
+- **Project Structure Organization** - Created `workflow/` directory for workflow-related files and `workflow/examples/` for YAML examples
+- **Path Resolution Fix** - Updated import paths in workflow files to work from subdirectory structure
+- **URController Refactor** - Renamed `URRobotInterface` to `URController` and file to `ur_controller.py` for cleaner, more intuitive naming
+- **moveJ Action** - Added joint move (`moveJ`) alongside linear move (`moveL`) for different movement types
+- **Condensed Workflow YAML** - Removed explicit step names, auto-generate descriptive names, replaced `move_to_position` with `moveL`
+- **Step-by-Step Workflow Execution** - Interactive mode with user prompts before each step and automatic delay skipping
+- **Improved YAML Formatting** - Inline arrays for coordinates/joints, rounded values, spacing between entries, removed usage tracking
+- **Safe Position Reachability Testing** - Automatic movement test after creating safe offset positions to verify accessibility
+- **Enhanced Interactive Menu** - Support for both number (1-8) and keyword inputs (teach, list, move, etc.)
+- **Simplified Safe Offset System** - Automatic prompting for safe positions after teaching with simple direction/distance input
+- **Remote Freedrive Teaching** - Simplified position teaching with blocking input (no timer/threading)
+- **Streamlined Interactive Menu** - Removed legacy manual teaching option, focused on remote freedrive workflow
+- **Robot Workflow System** - YAML-based workflow execution for sequential robot operations
+
+### Removed
+- **Debugging Test Files** - Deleted test_freedrive_focused.py, test_freedrive_remote.py, test_remote_freedrive_teacher.py
+- **Legacy Actions** - Removed `home` and `move_to_position` actions in favor of `moveL`/`moveJ` for cleaner, standardized API
+- **URRobotInterface** - Replaced with shorter, more intuitive `URController` class name
+
+### Removed
+- **Usage Tracking** - Removed usage_count and last_used fields for cleaner position files
+- **Workflow Actions** - Move to position, offset moves, gripper control, delays, position verification
+- **Sample Workflows** - Pick and place demo, inspection routines, and simple test workflows
+- **Workflow Runner** - Easy-to-use script for executing workflows with safety checks
+- **Position Overwrite Confirmation** - Safety prompts when reteaching existing positions to prevent accidental data loss
+- **Rich Position Metadata Collection** - Interactive prompts for position description, equipment, type, priority, and safety notes
+- **Enhanced Position Teaching Workflow** - Automatic prompting to teach observation poses when no AprilTags detected
+- **Observation Pose Auto-Teaching** - Streamlined workflow to teach observation poses immediately after grasp positions
+- **Smart Position Linking** - Automatic linking of positions to newly created observation poses
+- **Equipment Association** - Mandatory equipment linking for observation poses with validation
+- **Manual Position Teaching** - Position teaching using teach pendant freedrive with RTDE pose reading (no remote control commands)
+- **Two-Pose Teaching System** - Work poses and observation poses for positions with/without AprilTag visibility
+- **Position Linking Commands** - CLI and interactive commands to link positions to observation poses (`link` command)
+- **Clean YAML Format** - Human-readable position storage with essential data only (TCP pose, joint angles, AprilTag ID)
+- **Read-Only Robot Interface** - Safe RTDE connection that only reads poses, no movement commands
+- **Interactive Teaching Mode** - CLI interface for real-time position teaching and management
+- **Robotiq Gripper Control** - Socket-based gripper control via URCap port 63352 following RTDE documentation
+- Position teaching configuration in unified `config.yaml`
+- Position verification using AprilTag visibility detection
+- Position management (teach, observe, link, move, verify, list, delete)
+- Comprehensive position teaching documentation in `documentation/POSITION_TEACHING.md`
+- Enhanced position teaching workflow documentation in `documentation/ENHANCED_POSITION_TEACHING.md`
+- Unified configuration system with central `config.yaml` file in project root
+- `config_manager.py` module for centralized configuration access
+- Configuration guide in `documentation/CONFIGURATION_GUIDE.md`
+- Support for environment-based configuration overrides
+- Path resolution utilities for robust file path handling
+- Convenience functions for common configuration access patterns
 
 ### Fixed
-- RTDE library compatibility issues resolved using system Python environment (2025-08-26)
-- Robot movement commands now working with proper RTDE authentication (2025-08-26)
-
-### Removed
-- Temporary troubleshooting files and interfaces (2025-08-26)
+- Fixed AprilTag detector initialization error with undefined tag family variable
+- Fixed robot interface disconnect method call (should be `close()` not `disconnect()`)
+- Improved error handling and validation in AprilTag detector initialization
+- Added better diagnostics for AprilTag detector failures
+- Fixed camera calibration file loading in AprilTag detector
+- Resolved import errors for camera module (`picam`) in CLI and detection modules
+- Updated `camera/picam/__init__.py` to properly expose `PiCam` and `PiCamConfig` classes
+- Fixed import paths in `apriltag_detection.py` and `teach_positions.py` to use proper Python package structure
+- Corrected sys.path management for cross-module imports
 
 ### Changed
-- Reorganized repository structure with proper directory hierarchy (2025-08-26)
-  - Development practices moved to .github/copilot-instructions.md
-  - Documentation moved to documentation/ directory
-  - PiCam module and setup script moved to camera/picam/
-  - UR robot interface moved to robots/ur/
-  - All test scripts moved to tests/ directory
-  - setup_client.sh renamed to setup_picam_client.sh
-- Cleaned up duplicate if __name__ == "__main__" blocks in camera_server.py (2025-08-26)
-- Removed mock interface fallback from UR robot interface (2025-08-26)
-- Fixed PiCam constructor usage in test scripts (2025-08-25)
+- Updated `robots/ur/ur_robot_interface.py` to use centralized configuration
+- Updated `apriltag_detection.py` to use centralized configuration  
+- All modules now import from `config_manager` instead of individual config files
+- Configuration values now support dot notation access (e.g., `robot.ip_address`)
+- Command-line arguments now override config file values consistently
+
+### Improved
+- Simplified configuration management - single source of truth
+- Better path handling - no more broken references when moving files
+- Consistent configuration access patterns across all modules
+- Built-in defaults and graceful fallbacks
+- Configuration validation and debugging capabilities
 
 ### Removed
-- Empty and unused files: calibrate_camera.py, check_pi_leds.py, generate_checkerboard.py, pi_led_controller.py, test_calibration.py, test_camera_with_config.py, ur_robot_interface_mock.py, pi_cam_server/blink_act_led.py, pi_cam_server/pi_led_controller.py (2025-08-26)
-- Mock UR robot interface file (2025-08-26)
+- handeye_calibration/ directory and all hand-eye calibration scripts: collect_handeye_data.py, calculate_handeye_calibration.py, coordinate_transformer.py, etc.
+- handeye_rework/ directory and experimental calibration approaches
+- Hand-eye calibration related files from root: handeye_result.yaml, handeye_samples.json, analyze_motion.py, check_distances.py, test_close_distance.py
+- Hand-eye calibration sections from README.md, simplified to focus on pure AprilTag detection workflow
+- Individual config files (`camera_client_config.yaml`, `robots/ur/robot_config.yaml`) - now consolidated
+
+### Rationale
+- Hand-eye calibration was not producing realistic results
+- AprilTag detection works effectively without requiring camera-to-robot transformation
+- Simplified codebase focuses on core functionality: camera capture, AprilTag detection, and robot control as separate components
+- handeye_rework/collect_samples.py: implemented real robot/camera/apriltag hooks using existing interfaces
+- Configuration consolidation eliminates path issues and simplifies system management
+
+## [2025-09-12] - Camera Coordinate Frame Correction for Hand-Eye Calibration
+
+### Added
+- `tests/test_camera_coordinate_frame.py` - Empirical camera frame mapping test with automatic robot movement
+- Coordinate frame correction in `calculate_handeye_calibration.py` 
+- Camera-to-robot coordinate transformation matrix based on empirical testing
+
+### Changed
+- Updated hand-eye calibration to account for OpenCV camera frame vs robot frame differences
+- Robot X+ (RIGHT) → Camera X+, Robot Y+ (BACK) → Camera Z+, Robot Z+ (UP) → Camera Y+
+- Applied coordinate transformation: Camera [X,Y,Z] → Robot [X,Z,-Y]
+
+### Fixed
+- Hand-eye calibration offset issue (~0.95m → expected 10-30cm) by correcting coordinate frame mismatch
+- Camera pose data now properly transformed from OpenCV convention to robot frame before calibration
+
+## [2025-09-11] - Code Organization and Testing Utilities
+
+### Added
+- `tests/live_robot_monitor.py` - Real-time robot pose monitoring with quaternion/matrix display
+- `tests/rotations_cli.py` - CLI utility for rotation vector analysis and comparison
+- `tests/debug_coordinate_frames.py` - Coordinate frame debugging utility
+
+### Changed
+- Moved debugging and testing utilities from main directory to `tests/`
+- Improved code organization by separating core functionality from testing tools
+
+## [2025-01-20] - TCP Pose Accuracy and Configuration Management
+
+### Added
+- Centralized robot configuration via `robots/ur/robot_config.yaml`
+- TCP pose sign verification utility (`robots/ur/test_pose_signs.py`)
+- Command-line IP override support for all robot scripts
+- Configuration loading with fallback to defaults
+
+### Fixed
+- Removed incorrect Ry/Rz sign corrections - raw RTDE readings now match teach pendant
+- Eliminated hardcoded robot IPs throughout codebase
+- TCP pose reading accuracy for reliable hand-eye calibration
+
+### Changed
+- `ur_robot_interface.py`: Now loads robot IP and settings from YAML config
+- `test_robot_pose.py`: Added config file support with command-line override
+- `collect_handeye_data.py`: Added config file support with command-line override
+- All robot scripts now use centralized configuration management
+
+### Previous
+
+### Added
+- Comprehensive AprilTag pick-and-place workflow documentation in README
+- TCP pose reading accuracy verification utility (`robots/ur/test_robot_pose.py`)
+- Read-only mode for safer hand-eye calibration data collection
+- Improved calibration file path handling to save in proper directories
+
+### Fixed
+- Hand-eye calibration TCP pose reading accuracy issues
+- Calibration data file paths now save to correct handeye_calibration directory
+
+### Changed
+- Hand-eye calibration data collection now uses read-only mode by default
+- Updated workflow documentation with immediate testing after each setup step
+
+## [2025-09-05] - Hand-Eye Calibration Improvements
+
+### Summary
+- Addressed TCP pose reading accuracy that was affecting hand-eye calibration quality
+- Improved safety and workflow for calibration data collection
+- Added comprehensive documentation for complete AprilTag workflow
+
+### Next Steps
+- Verify TCP pose accuracy using the new test utility
+- Re-collect hand-eye calibration data with corrected pose readings
+- Continue refinement of calibration quality metrics

@@ -15,9 +15,16 @@ import os
 from pathlib import Path
 
 # Import centralized configuration
+import sys
+from pathlib import Path
+
+# Add setup directory to path
+sys.path.insert(0, str(Path(__file__).parent / "setup"))
+
 from config_manager import config, get_apriltag_family, get_apriltag_size, get_camera_calibration_file
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'camera', 'picam'))
+# Add camera module to Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'camera'))
 from picam import PiCam, PiCamConfig
 
 try:
@@ -56,17 +63,29 @@ class AprilTagDetector:
         print(f"🏷️  AprilTag Detector: {self.tag_family}, size={self.tag_size}m")
         print(f"📹 Camera calibration: {self.calibration_file}")
         
-        # Initialize detector
-        # pupil-apriltags expects families as a string, not a list
-        self.detector = PupilAprilTagDetector(families=tag_family)
+        # Initialize detector with better error handling
+        try:
+            # pupil-apriltags expects families as a string, not a list
+            if not self.tag_family or not isinstance(self.tag_family, str):
+                raise ValueError(f"Invalid tag family: {self.tag_family}")
+            
+            self.detector = PupilAprilTagDetector(families=self.tag_family)
+            print(f"✅ AprilTag detector initialized with family: {self.tag_family}")
+        except Exception as e:
+            print(f"❌ Failed to initialize AprilTag detector: {e}")
+            print(f"   Tag family: {self.tag_family} (type: {type(self.tag_family)})")
+            raise
         
         # Load camera calibration if provided
         self.camera_matrix = None
         self.dist_coeffs = None
         self.pose_estimation_enabled = False
         
-        if calibration_file:
-            self.load_calibration(calibration_file)
+        if self.calibration_file and self.calibration_file.exists():
+            self.load_calibration(self.calibration_file)
+        else:
+            print(f"⚠️  Camera calibration file not found: {self.calibration_file}")
+            print("   Pose estimation will be disabled")
     
     def load_calibration(self, calibration_file):
         """Load camera calibration from YAML file"""

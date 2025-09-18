@@ -197,13 +197,13 @@ Teach robot grasp poses relative to AprilTag coordinates, enabling automatic ada
 #### 1. Create Grasp Teaching Script
 ```python
 # grasp_teaching.py
-from robots.ur.ur_robot_interface import URRobotInterface
+from robots.ur.ur_controller import URController
 from camera.picam.picam import PiCam
 from tests.test_apriltag_detection import AprilTagDetector
 
 class GraspTeacher:
     def __init__(self, robot_ip, camera_config):
-        self.robot = URRobotInterface(robot_ip, read_only=True)
+        self.robot = URController(robot_ip, read_only=True)
         self.camera = PiCam(camera_config)
         self.detector = AprilTagDetector()
         self.taught_grasps = []
@@ -333,7 +333,7 @@ def transform_relative_to_world(relative_grasp, tag_pose_world):
 ```python
 class PickAndPlaceExecutor:
     def __init__(self, robot_ip, camera_config, hand_eye_calib):
-        self.robot = URRobotInterface(robot_ip)
+        self.robot = URController(robot_ip)
         self.camera = PiCam(camera_config)
         self.detector = AprilTagDetector()
         self.hand_eye_transform = load_hand_eye_calibration(hand_eye_calib)
@@ -535,7 +535,7 @@ robot_system_tools/
 ```
 
 ### Key Components
-- **URRobotInterface**: Robot control with coordinate frame corrections
+- **URController**: Robot control with coordinate frame corrections
 - **PiCam**: Camera client for remote Pi camera server
 - **AprilTagDetector**: Tag detection and pose estimation
 - **Hand-eye calibration**: Camera-to-robot coordinate transformation

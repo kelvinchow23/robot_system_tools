@@ -1,0 +1,129 @@
+# Robot System Tools - Unified Configuration
+# Central configuration file for all system components
+
+# System Settings
+system:
+  name: "Robot System Tools"
+  version: "1.0"
+  environment: "development"  # Options: development, production, test
+  log_level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
+
+# Robot Configuration
+robot:
+  type: "UR"  # Robot type: UR, other future robots
+  ip_address: "192.168.0.10"  # Robot IP address on network
+  
+  # Movement settings
+  default_speed: 0.03  # Default linear speed in m/s
+  default_acceleration: 0.08  # Default acceleration in m/s²
+  
+  # Safety settings  
+  position_tolerance: 0.001  # Position tolerance in meters (1mm precision)
+  rotation_tolerance: 0.01   # Rotation tolerance in radians (~0.57 degrees)
+  
+  # Calibration specific speeds (reduced for safety during calibration)
+  calibration_speed: 0.02  # Slower speed for calibration movements in m/s
+  calibration_acceleration: 0.1  # Conservative acceleration for calibration in m/s²
+
+# Gripper Configuration (Robotiq via URCap socket - port 63352)
+gripper:
+  type: "socket"  # Control type: socket (recommended for Robotiq URCap)
+  # ip_address defaults to robot IP when not specified
+  port: 63352  # Robotiq URCap standard port
+  
+  # Protocol settings
+  protocol: "robotiq"  # Robotiq string command protocol
+  timeout: 5.0  # Socket timeout in seconds
+
+# Camera Configuration
+camera:
+  type: "pi_camera"  # Camera type: pi_camera, usb_camera, etc.
+  
+  # Pi Camera Server (remote camera access)
+  server:
+    host: "100.114.26.7"  # Pi camera server IP address
+    port: 2222  # Server port for camera communication
+    timeout: 10  # Connection timeout in seconds
+  
+  # Local camera settings
+  client:
+    download_directory: "photos"  # Directory to save captured images
+    auto_create_dirs: true  # Automatically create directories if missing
+  
+  # Camera calibration
+  calibration:
+    file: "camera_calibration/camera_calibration.yaml"  # Path to calibration file
+    auto_load: true  # Load calibration automatically on startup
+    required: true  # Require calibration for pose estimation
+
+# AprilTag Detection Configuration
+apriltag:
+  family: "tag36h11"  # Tag family: tag36h11, tag25h9, tag16h5
+  tag_size: 0.023  # Physical tag size in meters (23mm)
+  
+  # Detection parameters
+  detection:
+    max_hamming: 2  # Maximum hamming distance for error correction
+    quad_decimate: 2.0  # Image decimation factor (higher = faster, less accurate)
+    quad_sigma: 0.0  # Gaussian blur sigma for quad detection
+    decode_sharpening: 0.25  # Image sharpening for decoding
+    
+  # Pose estimation
+  pose:
+    iterations: 100  # Maximum iterations for pose optimization
+    tolerance: 1e-6  # Convergence tolerance for pose estimation
+
+# Coordinate System Configuration
+coordinates:
+  robot_base_frame: "robot_base"  # Base coordinate frame for robot
+  camera_frame: "camera"  # Camera coordinate frame
+  apriltag_frame: "apriltag"  # AprilTag coordinate frame
+  
+  conventions:
+    robot: "ROS"  # Robot coordinate convention: ROS, DH, etc.
+    camera: "opencv"  # Camera coordinate convention: opencv, ros, etc.
+    apriltag: "opencv"  # AprilTag coordinate convention
+
+# File Paths (relative to project root)
+paths:
+  project_root: "."
+  config_dir: "."
+  camera_calibration_dir: "camera_calibration"
+  photos_dir: "photos"
+  logs_dir: "logs"
+  archive_dir: "archive"
+  taught_positions_file: "taught_positions.yaml"
+
+# Position Teaching Configuration
+position_teaching:
+  auto_save: true  # Automatically save positions after teaching
+  require_apriltag: false  # Require AprilTag detection for position teaching
+  confirmation_required: true  # Require user confirmation before movements
+  backup_positions: true  # Create backup of positions file
+
+# Logging Configuration
+logging:
+  level: "INFO"  # Log level: DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/robot_system.log"  # Log file path
+  max_file_size: "10MB"  # Maximum log file size before rotation
+  backup_count: 5  # Number of backup log files to keep
+
+# Development/Debug Settings
+debug:
+  enabled: false  # Enable debug mode
+  save_debug_images: false  # Save intermediate processing images
+  show_detection_images: false  # Display detection results visually
+  verbose_logging: false  # Enable verbose console output
+  
+# Safety Limits
+safety:
+  max_tcp_speed: 0.25  # Maximum TCP speed in m/s
+  max_tcp_acceleration: 1.0  # Maximum TCP acceleration in m/s²
+  workspace_limits:  # Robot workspace boundaries in meters
+    x_min: -0.5
+    x_max: 0.5
+    y_min: -0.5
+    y_max: 0.5
+    z_min: 0.0
+    z_max: 0.5

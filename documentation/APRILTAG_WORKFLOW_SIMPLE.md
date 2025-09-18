@@ -56,13 +56,13 @@ python tests/test_apriltag_detection.py
 ### 4. Robot Vision Integration
 
 ```python
-from robots.ur.ur_robot_interface import URRobotInterface
+from robots.ur.ur_controller import URController
 from camera.picam.picam import PiCam, PiCamConfig
 from apriltag_detection import AprilTagDetector
 import cv2
 
 # Initialize systems
-robot = URRobotInterface('192.168.0.10')
+robot = URController('192.168.0.10')
 camera = PiCam(PiCamConfig.from_yaml('camera_client_config.yaml'))
 detector = AprilTagDetector(
     tag_family='tag36h11',

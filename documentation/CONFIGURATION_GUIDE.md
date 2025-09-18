@@ -83,7 +83,7 @@ photos_dir = get_photos_directory()
 ```python
 from config_manager import config
 
-class URRobotInterface:
+class URController:
     def __init__(self, robot_ip=None, speed=None):
         # Use provided values or fall back to config
         self.robot_ip = robot_ip or config.get('robot.ip_address')
@@ -120,7 +120,7 @@ You can still override config values with command-line arguments:
 
 ```python
 # Example: Robot interface with IP override
-robot = URRobotInterface(robot_ip="192.168.1.50")
+robot = URController(robot_ip="192.168.1.50")
 
 # Example: AprilTag with family override  
 detector = AprilTagDetector(tag_family="tag25h9")

@@ -9,7 +9,7 @@ import argparse
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'robots', 'ur'))
-from ur_robot_interface import URRobotInterface
+from robots.ur.ur_controller import URController
 
 def test_ur_robot(robot_ip):
     """
@@ -23,7 +23,7 @@ def test_ur_robot(robot_ip):
     
     try:
         # Initialize robot interface
-        robot = URRobotInterface(robot_ip)
+        robot = URController(robot_ip)
         
         # Test connection by getting current state
         print("\n🔍 Testing robot connection...")

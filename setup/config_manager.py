@@ -49,8 +49,19 @@ class ConfigManager:
                 return config_path
         
         project_root = self.find_project_root()
-        config_path = project_root / config_file
+        # First try the new setup directory structure
+        config_path = project_root / "setup" / config_file
         
+        if config_path.exists():
+            return config_path
+        
+        # Fallback to old config directory for backward compatibility
+        config_path = project_root / "config" / config_file
+        if config_path.exists():
+            return config_path
+        
+        # Fallback to old location for backward compatibility
+        config_path = project_root / config_file
         if config_path.exists():
             return config_path
         
@@ -138,6 +149,16 @@ class ConfigManager:
     def resolve_path(self, relative_path: str) -> Path:
         """Resolve relative path to absolute path based on project root"""
         project_root = self.get('_project_root')
+        
+        # Special handling for positions files
+        if relative_path == 'taught_positions.yaml':
+            # First try new positions directory
+            positions_path = project_root / "positions" / relative_path
+            if positions_path.exists():
+                return positions_path
+            # Fallback to old location
+            return project_root / relative_path
+        
         return project_root / relative_path
     
     def get_robot_config(self) -> Dict[str, Any]:

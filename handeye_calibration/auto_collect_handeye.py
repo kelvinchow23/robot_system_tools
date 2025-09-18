@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'robots', 'ur'))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'camera', 'picam'))
 
-from ur_robot_interface import URRobotInterface
+from robots.ur.ur_controller import URController
 from picam import PiCam, PiCamConfig
 from apriltag_detection import AprilTagDetector
 
@@ -33,7 +33,7 @@ class AutoHandEyeCollector:
         self.apriltag_config = apriltag_config
         
         print("🤖 Initializing UR robot (control mode for automatic movement)...")
-        self.robot = URRobotInterface(robot_ip, read_only=False)
+        self.robot = URController(robot_ip, read_only=False)
         
         print("📷 Initializing camera...")
         camera_config = PiCamConfig.from_yaml(camera_config_file)

@@ -1,0 +1,84 @@
+apriltags:
+  tag_1:
+    dictionary: DICT_4X4_1000
+    marker_length: 0.023
+    description: Left workstation
+  tag_2:
+    dictionary: DICT_4X4_1000
+    marker_length: 0.023
+    description: Right workstation
+positions:
+  safe-home:
+    coordinates: [-0.056, -0.451, 0.307, -0.037, -2.166, 2.265]
+    joints: [5.169, -1.752, -2.405, 1.07, -5.193, 6.269]
+    description: Safe home position
+    tag_reference: tag_1
+    has_apriltag_view: true
+    camera_to_tag: [-0.144, 0.045, 0.42, 3.111, -0.005, -0.056]
+  grasp-A:
+    coordinates: [0.097, -0.679, 0.222, 0.016, 2.222, -2.192]
+    joints: [5.24, -2.747, -0.909, 0.503, -5.234, 6.309]
+    description: Left column grasp
+    tag_reference: tag_1
+    has_apriltag_view: true
+    camera_to_tag: [0.005, -0.05, 0.183, -3.093, 0.003, 0.079]
+  grasp-A-safe:
+    coordinates: [0.097, -0.679, 0.242, 0.016, 2.222, -2.192]
+    joints: [5.24, -2.747, -0.909, 0.503, -5.234, 6.309]
+    description: Safe approach above grasp-A (2cm offset)
+    tag_reference: tag_1
+    has_apriltag_view: true
+    camera_to_tag: [0.005, -0.05, 0.203, -3.093, 0.003, 0.079]
+  grasp-B:
+    coordinates: [-0.148, -0.688, 0.172, -0.03, 2.223, -2.188]
+    joints: [4.656, -3.035, -0.52, 0.4, -4.625, 6.283]
+    description: Right column grasp
+    observation_pose: observe-B
+    has_apriltag_view: false
+    camera_to_tag: null
+  grasp-B-safe:
+    coordinates: [-0.148, -0.688, 0.192, -0.03, 2.223, -2.188]
+    joints: [4.656, -3.035, -0.52, 0.4, -4.625, 6.283]
+    description: Safe approach above grasp-B (2cm offset)
+    has_apriltag_view: false
+    camera_to_tag: null
+  observe-B:
+    coordinates: [-0.158, -0.574, 0.286, -0.042, 2.298, -2.141]
+    joints: [4.614, -2.244, -1.515, 0.544, -4.599, 6.253]
+    description: Observation pose for right column
+    tag_reference: tag_2
+    has_apriltag_view: true
+    camera_to_tag: [0.001, -0.001, 0.299, -3.066, -0.021, 0.127]
+  to-delete:
+    coordinates: [-0.528, -0.427, 0.258, -1.081, -1.273, 1.636]
+    joints: [4.321, -2.983, -0.4, 0.45, -5.557, 6.282]
+    description: ''
+    tag_reference: null
+    has_apriltag_view: false
+    camera_to_tag: null
+    observation_pose: null
+    pose_type: position
+    taught_with_freedrive: true
+    timestamp: 1758229441.9152522
+  to-delete-safe:
+    coordinates: [-0.528, -0.527, 0.258, -1.081, -1.273, 1.636]
+    joints: [4.321, -2.983, -0.4, 0.45, -5.557, 6.282]
+    description: Safe back position (100.0mm from to-delete)
+    tag_reference: null
+    has_apriltag_view: false
+    camera_to_tag: null
+    observation_pose: null
+    pose_type: position
+    taught_with_freedrive: true
+    timestamp: 1758229441.9152522
+  dummy:
+    coordinates: [-0.226, -0.525, 0.283, -0.349, -1.974, 2.13]
+    joints: [4.665, -2.254, -1.74, 0.929, -4.987, 6.286]
+    description: ''
+    tag_reference: null
+    has_apriltag_view: false
+    camera_to_tag: null
+    observation_pose: null
+    pose_type: position
+    taught_with_freedrive: true
+    timestamp: 1758229567.3163688

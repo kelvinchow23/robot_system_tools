@@ -10,6 +10,7 @@
 - Skip unit tests unless explicitly requested
 - Follow patterns in CONTRIBUTING.md when present
 - Prefer writing Python if no language specified
+- Write comments that explain why code exists, not how it was developed
 
 ## Git Operations
 - When asked to remove all file changes, use git checkout -- <filename>
