@@ -20,6 +20,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "setup"))
 from robots.ur.ur_controller import URController
 from config_manager import config
 
+# Import visual servoing
+try:
+    from visual_servo.visual_servo_engine import VisualServoEngine
+    VISUAL_SERVO_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Visual servoing not available: {e}")
+    VISUAL_SERVO_AVAILABLE = False
+
 class WorkflowExecutor:
     """Execute robot workflows defined in YAML format"""
     
@@ -33,6 +41,7 @@ class WorkflowExecutor:
         self.robot = None
         self.taught_positions = {}
         self.workflow_history = []
+        self.visual_servo_engine = None
         
         # Load taught positions
         if taught_positions_file is None:
@@ -40,6 +49,9 @@ class WorkflowExecutor:
         
         self.positions_file = Path(taught_positions_file)
         self.load_taught_positions()
+        
+        # Initialize visual servo engine
+        self.init_visual_servo_engine()
         
         print(f"🤖 Workflow Executor initialized")
         print(f"📍 Loaded {len(self.taught_positions.get('positions', {}))} taught positions")
@@ -58,6 +70,20 @@ class WorkflowExecutor:
             print(f"❌ Error loading positions: {e}")
             self.taught_positions = {'positions': {}}
     
+    def init_visual_servo_engine(self):
+        """Initialize visual servo engine if available"""
+        try:
+            # Import AprilTag detector
+            from apriltag_detection import AprilTagDetector
+            
+            # Initialize visual servo engine without robot (robot set later)
+            detector = AprilTagDetector()
+            self.visual_servo_engine = VisualServoEngine(None, self.positions_file, detector)
+            print(f"✅ Visual servo engine initialized")
+        except Exception as e:
+            print(f"⚠️  Visual servo engine unavailable: {e}")
+            self.visual_servo_engine = None
+    
     def connect_robot(self):
         """Connect to the robot"""
         try:
@@ -69,6 +95,11 @@ class WorkflowExecutor:
             try:
                 _ = self.robot.get_tcp_pose()
                 print(f"🔌 Connected to robot at {robot_ip}")
+                
+                # Initialize visual servo engine now that robot is connected
+                if self.visual_servo_engine:
+                    self.visual_servo_engine.set_robot_controller(self.robot)
+                
                 return True
             except Exception as e:
                 print(f"❌ Robot not responding: {e}")
@@ -227,6 +258,8 @@ class WorkflowExecutor:
                 return self._delay(step, step_mode)
             elif action == 'verify_position':
                 return self._verify_position(step)
+            elif action == 'visual_servo':
+                return self._visual_servo_action(step)
             else:
                 print(f"❌ Unknown action: {action}")
                 return False
@@ -274,14 +307,18 @@ class WorkflowExecutor:
         elif action == 'verify_position':
             position = step.get('position', 'unknown')
             return f"Verify at {position}"
+        elif action == 'visual_servo':
+            position = step.get('position', 'unknown')
+            return f"Visual servo to {position}"
         else:
             return f"Step {step_number} ({action})"
     
     def _move_to_position(self, step):
-        """Move to a taught position"""
+        """Move to a taught position with optional visual servoing"""
         position_name = step.get('position')
         speed = step.get('speed', 0.1)  # Default 10% speed
         action = step.get('action', '').lower()
+        use_visual_servo = step.get('visual_servo', False)
         
         if not position_name:
             print("❌ No position specified")
@@ -301,10 +338,26 @@ class WorkflowExecutor:
         else:
             print(f"🎯 Linear move to position: {position_name}")
         
-        print(f"📍 Coordinates: {[f'{x:.3f}' for x in coordinates]}")
+        # Check if visual servoing is requested
+        if use_visual_servo and self.visual_servo_engine:
+            print(f"�️ Visual servoing enabled for {position_name}")
+            
+            # Use visual servo engine to get corrected pose
+            try:
+                corrected_pose = self.visual_servo_engine.get_corrected_pose(position_name, coordinates)
+                if corrected_pose is not None:
+                    target_pose = corrected_pose
+                    print(f"✅ Using visual servo corrected pose")
+                else:
+                    target_pose = np.array(coordinates)
+                    print(f"⚠️ Visual servo correction failed, using original pose")
+            except Exception as e:
+                print(f"⚠️ Visual servo error: {e}, using original pose")
+                target_pose = np.array(coordinates)
+        else:
+            target_pose = np.array(coordinates)
         
-        # Convert to numpy array and move
-        target_pose = np.array(coordinates)
+        print(f"📍 Target coordinates: {[f'{x:.3f}' for x in target_pose]}")
         
         # Use joint move or linear move based on action
         if action == 'movej':
@@ -430,6 +483,48 @@ class WorkflowExecutor:
             return True
         else:
             print(f"❌ Position verification failed - difference too large")
+            return False
+    
+    def _visual_servo_action(self, step):
+        """Execute visual servoing to correct position based on AprilTag detection"""
+        position_name = step.get('position')
+        speed = step.get('speed', 0.1)  # Default 10% speed
+        action_type = step.get('type', 'movel').lower()  # 'movel' or 'movej'
+        
+        if not position_name:
+            print("❌ No position specified for visual servo")
+            return False
+        
+        if not self.visual_servo_engine:
+            print("❌ Visual servo engine not available")
+            return False
+        
+        positions = self.taught_positions.get('positions', {})
+        if position_name not in positions:
+            print(f"❌ Position '{position_name}' not found")
+            return False
+        
+        position_data = positions[position_name]
+        original_coordinates = position_data['coordinates']
+        
+        print(f"👁️ Starting visual servo to position: {position_name}")
+        
+        try:
+            # Execute visual servoing
+            success, result_data = self.visual_servo_engine.visual_servo_to_position(
+                position_name, 
+                update_stored_pose=True
+            )
+            
+            if success:
+                print("✅ Visual servo completed successfully")
+                return True
+            else:
+                print("❌ Visual servo failed")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Visual servo error: {e}")
             return False
     
     def get_workflow_history(self):

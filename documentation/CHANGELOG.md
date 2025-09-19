@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Automatic Equipment Association** - All position teaching now automatically prompts for equipment association and observation pose setup
+- **Enhanced Position Teaching Workflow** - Unified approach for both regular and freedrive position teaching with equipment linking
+- **Improved Equipment Management** - Automatic offset calculation between work positions and observation poses for visual servoing
+- **Clean YAML Structure** - Removed irrelevant fields (timestamps, freedrive flags) and AprilTag data from work positions
+- **Dual-Purpose Positions** - Work positions can also serve as observation poses when they have AprilTag view and no other observation pose exists
+- **Smart AprilTag Data Management** - Only observation poses store AprilTag data; work positions use observation poses for visual servoing
+- **Intelligent Prompting** - When AprilTag is detected during position teaching, defaults to dual-purpose position with negative confirmation prompt
 - **Comprehensive File Organization** - Moved CHANGELOG.md to documentation/, renamed config/ to setup/, moved requirements.txt and setup_venv.sh to setup/
 - **Enhanced Directory Organization** - Created `positions/` directory for position files and moved teach_positions.py there
 - **Project Structure Organization** - Created `workflow/` directory for workflow-related files and `workflow/examples/` for YAML examples

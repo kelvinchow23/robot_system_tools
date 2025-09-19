@@ -291,6 +291,269 @@ class PositionTeacher:
             'apriltag_detections': detections,
             'timestamp': datetime.now().isoformat()
         }
+    
+    def _get_equipment_observation_poses(self, equipment_name):
+        """Get all observation poses for a specific equipment"""
+        observation_poses = []
+        if hasattr(self.taught_positions, 'positions'):
+            for pos_name, pos_data in self.taught_positions['positions'].items():
+                if (pos_data.get('pose_type') == 'observation' and 
+                    pos_data.get('equipment_name') == equipment_name):
+                    observation_poses.append(pos_name)
+        return observation_poses
+    
+    def _offer_observation_pose_teaching(self, position_name, equipment_name):
+        """Offer to teach an observation pose if none exists for the equipment"""
+        if not equipment_name:
+            return  # No equipment specified, can't offer observation pose
+            
+        # Check if observation poses already exist for this equipment
+        existing_obs_poses = self._get_equipment_observation_poses(equipment_name)
+        
+        if existing_obs_poses:
+            print(f"ℹ️  Existing observation poses for '{equipment_name}': {', '.join(existing_obs_poses)}")
+            return  # Observation poses already exist
+            
+        print(f"\n💡 No observation poses found for equipment '{equipment_name}'")
+        print("📸 Observation poses enable visual servoing for positions without direct AprilTag view")
+        
+        try:
+            teach_obs = input("🔍 Would you like to teach an observation pose for this equipment? (Y/n): ").lower().strip()
+            if teach_obs != 'n' and teach_obs != 'no':
+                # Generate suggested observation pose name
+                obs_name = f"{equipment_name}-observe"
+                suggested_name = input(f"Observation pose name (default: {obs_name}): ").strip()
+                if not suggested_name:
+                    suggested_name = obs_name
+                    
+                obs_description = input("Observation pose description (optional): ").strip()
+                if not obs_description:
+                    obs_description = f"Observation pose for {equipment_name}"
+                
+                print(f"\n🎯 Teaching observation pose '{suggested_name}' for equipment '{equipment_name}'...")
+                success = self.teach_observation_pose(suggested_name, equipment_name, obs_description)
+                
+                if success:
+                    print(f"✅ Observation pose '{suggested_name}' taught successfully!")
+                    print(f"💡 Future positions for '{equipment_name}' can now use this observation pose for visual servoing")
+                else:
+                    print(f"❌ Failed to teach observation pose '{suggested_name}'")
+        except (EOFError, KeyboardInterrupt):
+            print("\n💡 Skipping observation pose teaching")
+    
+    def _handle_equipment_association(self, position_name, state):
+        """Handle equipment association and observation pose teaching after position is taught"""
+        print(f"\n⚙️  Equipment Association for '{position_name}'")
+        print("=" * 50)
+        
+        try:
+            # Ask for equipment name
+            equipment_name = input("📦 Equipment name (required for visual servoing): ").strip()
+            if not equipment_name:
+                print("⚠️  No equipment specified - position will not have visual servoing capability")
+                return None, None
+            
+            # Check if we have existing observation poses for this equipment
+            existing_obs_poses = self._get_equipment_observation_poses(equipment_name)
+            
+            observation_pose = None
+            
+            if existing_obs_poses:
+                print(f"✅ Found existing observation poses for '{equipment_name}': {', '.join(existing_obs_poses)}")
+                
+                # Let user choose which observation pose to use
+                print("\nOptions:")
+                for i, obs_pose in enumerate(existing_obs_poses, 1):
+                    print(f"  {i}. Use '{obs_pose}'")
+                print(f"  {len(existing_obs_poses) + 1}. Teach NEW observation pose")
+                print(f"  {len(existing_obs_poses) + 2}. No observation pose (manual positioning only)")
+                
+                while True:
+                    choice = input(f"Select option (1-{len(existing_obs_poses) + 2}): ").strip()
+                    if choice.isdigit():
+                        idx = int(choice) - 1
+                        if 0 <= idx < len(existing_obs_poses):
+                            # Use existing observation pose
+                            observation_pose = existing_obs_poses[idx]
+                            break
+                        elif idx == len(existing_obs_poses):
+                            # Teach new observation pose
+                            observation_pose = self._teach_new_observation_pose(equipment_name)
+                            break
+                        elif idx == len(existing_obs_poses) + 1:
+                            # No observation pose
+                            observation_pose = None
+                            break
+                    print(f"❌ Please enter a number between 1 and {len(existing_obs_poses) + 2}")
+            else:
+                # No existing observation pose for this equipment
+                print(f"\n🎯 No observation pose found for equipment '{equipment_name}'")
+                
+                # Check if current position has AprilTag detection
+                has_apriltag = bool(state.get('apriltag_detections'))
+                
+                if has_apriltag:
+                    print(f"✅ AprilTag detected in current position!")
+                    print(f"💡 This position can serve as both work position AND observation pose")
+                    
+                    # Ask negative question - default to using dual purpose
+                    teach_separate = input("🔍 Teach a SEPARATE observation pose instead? (y/N): ").lower().strip()
+                    if teach_separate == 'y' or teach_separate == 'yes':
+                        observation_pose = self._teach_new_observation_pose(equipment_name)
+                    else:
+                        print(f"🎯 Using '{position_name}' as dual-purpose position (work + observation)")
+                        observation_pose = position_name  # Use current position as observation pose
+                else:
+                    print("📸 An observation pose enables visual servoing for this position")
+                    
+                    # Ask positive question when no AprilTag detected
+                    teach_obs = input("🔍 Would you like to teach an observation pose for this equipment? (Y/n): ").lower().strip()
+                    if teach_obs != 'n' and teach_obs != 'no':
+                        observation_pose = self._teach_new_observation_pose(equipment_name)
+            
+            # Update the position with equipment association
+            self._update_position_with_equipment(position_name, equipment_name, observation_pose, state)
+            
+            return equipment_name, observation_pose
+                
+        except (EOFError, KeyboardInterrupt):
+            print("\n💡 Skipping equipment association")
+            return None, None
+    
+    def _teach_new_observation_pose(self, equipment_name):
+        """Helper to teach a new observation pose for equipment"""
+        # Generate suggested observation pose name
+        obs_name = f"{equipment_name}-observe"
+        suggested_name = input(f"Observation pose name (default: {obs_name}): ").strip()
+        if not suggested_name:
+            suggested_name = obs_name
+            
+        obs_description = input("Observation pose description (optional): ").strip()
+        if not obs_description:
+            obs_description = f"Observation pose for {equipment_name}"
+        
+        print(f"\n🎯 Teaching observation pose '{suggested_name}' for equipment '{equipment_name}'...")
+        success = self.teach_observation_pose(suggested_name, equipment_name, obs_description)
+        
+        if success:
+            print(f"✅ Observation pose '{suggested_name}' taught successfully!")
+            return suggested_name
+        else:
+            print(f"❌ Failed to teach observation pose '{suggested_name}'")
+            return None
+    
+    def _update_position_with_equipment(self, position_name, equipment_name, observation_pose, state):
+        """Update position with equipment association and observation pose data"""
+        if position_name not in self.taught_positions.get('positions', {}):
+            print(f"❌ Position '{position_name}' not found")
+            return
+            
+        position_data = self.taught_positions['positions'][position_name]
+        
+        # Add equipment name
+        if equipment_name:
+            position_data['equipment_name'] = equipment_name
+        
+        # Add observation pose and calculate offset if applicable
+        if observation_pose:
+            position_data['observation_pose'] = observation_pose
+            
+            # Calculate offset from observation pose
+            obs_pos_data = self.taught_positions['positions'].get(observation_pose)
+            if obs_pos_data and 'coordinates' in obs_pos_data:
+                try:
+                    import numpy as np
+                    obs_coords = np.array(obs_pos_data['coordinates'])
+                    current_coords = np.array(position_data['coordinates'])
+                    observation_offset = (current_coords - obs_coords).tolist()
+                    position_data['observation_offset'] = observation_offset
+                    print(f"🧮 Calculated offset from observation pose: {[round(x, 3) for x in observation_offset]}")
+                except Exception as e:
+                    print(f"⚠️  Could not calculate offset: {e}")
+                    position_data['observation_offset'] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            else:
+                position_data['observation_offset'] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        else:
+            position_data['observation_pose'] = None
+            position_data['observation_offset'] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        
+        # Handle AprilTag detection and dual-purpose positions
+        has_direct_apriltag_view = bool(state.get('apriltag_detections'))
+        
+        # Check if this is explicitly a dual-purpose position (observation_pose == position_name)
+        is_dual_purpose = observation_pose == position_name
+        
+        if is_dual_purpose and has_direct_apriltag_view:
+            # Explicitly set as dual-purpose position
+            print(f"🎯 Setting '{position_name}' as dual-purpose position (work + observation)")
+            
+            if len(state['apriltag_detections']) == 1:
+                selected_apriltag = state['apriltag_detections'][0]
+                tag_id = selected_apriltag['tag_id']
+                position_data['tag_reference'] = f"tag_{tag_id}"
+                position_data['camera_to_tag'] = self._extract_camera_to_tag_transform(selected_apriltag)
+                position_data['pose_type'] = ['work', 'observation']
+                # Self-reference for observation
+                position_data['observation_pose'] = position_name
+                position_data['observation_offset'] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                print(f"✅ Dual-purpose position with Tag ID {tag_id}")
+            else:
+                # Multiple tags - fallback to position only
+                position_data['pose_type'] = 'work'
+                print("🏷️  Multiple AprilTags detected - defaulting to work-only position")
+                
+        elif has_direct_apriltag_view and equipment_name:
+            # Check if this can be auto-detected as dual purpose (no other observation poses exist)
+            existing_obs_poses = self._get_equipment_observation_poses(equipment_name)
+            # Remove self from existing poses if present
+            existing_obs_poses = [obs for obs in existing_obs_poses if obs != position_name]
+            
+            if not existing_obs_poses and not observation_pose:
+                # No other observation pose exists and none specified - this can be dual purpose
+                print(f"🎯 Auto-setting '{position_name}' as dual-purpose (no other observation poses exist)")
+                
+                if len(state['apriltag_detections']) == 1:
+                    selected_apriltag = state['apriltag_detections'][0]
+                    tag_id = selected_apriltag['tag_id']
+                    position_data['tag_reference'] = f"tag_{tag_id}"
+                    position_data['camera_to_tag'] = self._extract_camera_to_tag_transform(selected_apriltag)
+                    position_data['pose_type'] = ['work', 'observation']
+                    # Self-reference for observation
+                    position_data['observation_pose'] = position_name
+                    position_data['observation_offset'] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                    print(f"✅ Auto dual-purpose position with Tag ID {tag_id}")
+                else:
+                    # Multiple tags - position only
+                    position_data['pose_type'] = 'work'
+                    print("🏷️  Multiple AprilTags - work-only position")
+            else:
+                # Other observation poses exist or one was specified - this is work position only
+                position_data['pose_type'] = 'work'
+                if existing_obs_poses:
+                    print(f"📍 Work-only position (existing observation poses: {', '.join(existing_obs_poses)})")
+        else:
+            # No AprilTag view or no equipment - work position only
+            position_data['pose_type'] = 'work'
+        
+        # Clean up irrelevant fields for work positions
+        if position_data.get('pose_type') == 'work' or (isinstance(position_data.get('pose_type'), list) and 'work' in position_data['pose_type'] and 'observation' not in position_data['pose_type']):
+            # Remove AprilTag data from work-only positions
+            position_data.pop('tag_reference', None)
+            position_data.pop('has_apriltag_view', None)
+            position_data.pop('camera_to_tag', None)
+        
+        # Remove irrelevant metadata fields
+        position_data.pop('taught_with_freedrive', None)
+        position_data.pop('timestamp', None)
+        
+        # Save the updated position
+        self.save_positions()
+        print(f"✅ Position '{position_name}' updated with equipment association")
+        
+        if observation_pose:
+            print(f"🔗 Linked to observation pose: '{observation_pose}'")
+        if equipment_name:
+            print(f"⚙️  Equipment: '{equipment_name}'")
         
     def teach_position(self, position_name, description="", interactive_metadata=True):
         """Teach a new position using manual freedrive on teach pendant"""
@@ -425,221 +688,30 @@ class PositionTeacher:
             state['robot_pose'] = current_pose
             state['joint_positions'] = current_joints
             
-            # Display detected AprilTags
-            if state['apriltag_detections']:
-                print(f"🏷️  Detected {len(state['apriltag_detections'])} AprilTag(s):")
-                
-                # Display all detected tags with indices
-                for i, det in enumerate(state['apriltag_detections'], 1):
-                    tag_id = det['tag_id']
-                    distance = det.get('distance_mm', 'unknown')
-                    print(f"   {i}. Tag ID {tag_id}: {distance}mm away")
-                
-                # Select which AprilTag to associate with this position
-                selected_apriltag = None
-                if len(state['apriltag_detections']) == 1:
-                    # Only one tag - use it automatically
-                    selected_apriltag = state['apriltag_detections'][0]
-                    print(f"✅ Using Tag ID {selected_apriltag['tag_id']} (only tag detected)")
-                else:
-                    # Multiple tags - ask user to choose
-                    while True:
-                        choice = input(f"Select AprilTag to associate with this position (1-{len(state['apriltag_detections'])}): ").strip()
-                        if choice.isdigit():
-                            idx = int(choice) - 1
-                            if 0 <= idx < len(state['apriltag_detections']):
-                                selected_apriltag = state['apriltag_detections'][idx]
-                                print(f"✅ Selected Tag ID {selected_apriltag['tag_id']}")
-                                break
-                        print(f"❌ Please enter a number between 1 and {len(state['apriltag_detections'])}")
-                
-                # Ensure AprilTag definition exists in YAML
-                tag_id = selected_apriltag['tag_id']
-                self._ensure_apriltag_definition(f"tag_{tag_id}")
-                        
-                # Store position with direct AprilTag view
-                position_data = {
-                    'coordinates': current_pose.tolist(),
-                    'joints': current_joints.round(3).tolist(),
-                    'description': metadata['description'],
-                    'tag_reference': f"tag_{tag_id}",
-                    'has_apriltag_view': True,
-                    'camera_to_tag': self._extract_camera_to_tag_transform(selected_apriltag),
-                    'observation_pose': None,
-                    'pose_type': 'position',  # Mark as work position
-                    'equipment_name': metadata.get('equipment_name'),
-                    'position_type': metadata.get('position_type', 'grasp'),
-                    'priority': metadata.get('priority', 'normal'),
-                    'safety_notes': metadata.get('safety_notes', ''),
-                    'timestamp': state['timestamp']
-                }
-                
-                self.taught_positions['positions'][position_name] = position_data
-                self.save_positions()
-                print(f"✅ Position '{position_name}' taught successfully with AprilTag view (Tag {tag_id})")
-                
-                # Prompt for safe offset position after successful teaching
-                try:
-                    create_safe = input("\n🛡️  Create associated safe position? (Y/n): ").lower().strip()
-                    if create_safe != 'n' and create_safe != 'no':
-                        self.create_simple_safe_offset(position_name)
-                except (EOFError, KeyboardInterrupt):
-                    print("\n💡 Skipping safe position creation")
-                
-                
-            else:
-                print("⚠️  No AprilTags detected in current view")
-                print("This position needs an observation pose for AprilTag correction.")
-                
-                # Check if we have existing observation poses
-                print("\nAvailable positions with AprilTag view:")
-                apriltag_positions = self._get_apriltag_positions()
-                
-                if apriltag_positions:
-                    for i, pos_name in enumerate(apriltag_positions, 1):
-                        print(f"   {i}. {pos_name}")
-                    
-                    print("\nOptions:")
-                    print("  1-{}: Link to existing observation pose".format(len(apriltag_positions)))
-                    print("  T: Teach NEW observation pose now")
-                    print("  S: Skip (save position without AprilTag correction)")
-                    
-                    choice = input("Select option: ").strip().upper()
-                    observation_pose = None
-                    
-                    # Handle teaching new observation pose
-                    if choice == 'T':
-                        print("\n🎯 Let's teach a new observation pose for this position...")
-                        
-                        # Generate suggested name
-                        obs_name = f"{position_name}-obs"
-                        suggested_name = input(f"Observation pose name (default: {obs_name}): ").strip()
-                        if not suggested_name:
-                            suggested_name = obs_name
-                        
-                        # Get equipment name
-                        equipment_name = input("Equipment name (required): ").strip()
-                        if not equipment_name:
-                            print("❌ Equipment name is required for observation poses")
-                            equipment_name = "unknown-equipment"
-                        
-                        obs_description = input("Observation pose description (optional): ").strip()
-                        
-                        print(f"\n🔄 Now move the robot to observe AprilTags for '{equipment_name}'...")
-                        print("Position the robot where it can clearly see AprilTags on the equipment.")
-                        
-                        # Teach the observation pose
-                        if self.teach_observation_pose(suggested_name, equipment_name, obs_description):
-                            observation_pose = suggested_name
-                            print(f"\n🔗 Automatically linking '{position_name}' to '{observation_pose}'")
-                        else:
-                            print("❌ Failed to teach observation pose")
-                    
-                    # Handle linking to existing observation pose
-                    elif choice.isdigit():
-                        idx = int(choice) - 1
-                        if 0 <= idx < len(apriltag_positions):
-                            observation_pose = apriltag_positions[idx]
-                    
-                    # Store position with observation pose reference
-                    position_data = {
-                        'coordinates': current_pose.tolist(),
-                        'joints': current_joints.round(3).tolist(),
-                        'description': metadata['description'],
-                        'tag_reference': None,
-                        'has_apriltag_view': False,
-                        'camera_to_tag': None,
-                        'observation_pose': observation_pose,
-                        'pose_type': 'position',  # Mark as work position
-                        'equipment_name': metadata.get('equipment_name'),
-                        'position_type': metadata.get('position_type', 'grasp'),
-                        'priority': metadata.get('priority', 'normal'),
-                        'safety_notes': metadata.get('safety_notes', ''),
-                        'timestamp': state['timestamp']
-                    }
-                    
-                    if not hasattr(self.taught_positions, 'positions'):
-                        self.taught_positions['positions'] = {}
-                    self.taught_positions['positions'][position_name] = position_data
-                    self.save_positions()
-                    
-                    if observation_pose:
-                        print(f"✅ Position '{position_name}' taught with observation pose: {observation_pose}")
-                    else:
-                        print(f"✅ Position '{position_name}' taught without AprilTag correction")
-                
-                else:
-                    # No existing observation poses - offer to teach one
-                    print("   (No existing observation poses found)")
-                    print("\nOptions:")
-                    print("  T: Teach NEW observation pose now")
-                    print("  S: Skip (save position without AprilTag correction)")
-                    
-                    choice = input("Select option (T/S): ").strip().upper()
-                    observation_pose = None
-                    
-                    if choice == 'T':
-                        print("\n🎯 Let's teach a new observation pose for this position...")
-                        
-                        # Generate suggested name
-                        obs_name = f"{position_name}-obs"
-                        suggested_name = input(f"Observation pose name (default: {obs_name}): ").strip()
-                        if not suggested_name:
-                            suggested_name = obs_name
-                        
-                        # Get equipment name
-                        equipment_name = input("Equipment name (required): ").strip()
-                        if not equipment_name:
-                            print("❌ Equipment name is required for observation poses")
-                            equipment_name = "unknown-equipment"
-                        
-                        obs_description = input("Observation pose description (optional): ").strip()
-                        
-                        print(f"\n🔄 Now move the robot to observe AprilTags for '{equipment_name}'...")
-                        print("Position the robot where it can clearly see AprilTags on the equipment.")
-                        
-                        # Teach the observation pose
-                        if self.teach_observation_pose(suggested_name, equipment_name, obs_description):
-                            observation_pose = suggested_name
-                            print(f"\n🔗 Automatically linking '{position_name}' to '{observation_pose}'")
-                        else:
-                            print("❌ Failed to teach observation pose")
-                    
-                    # Save position without observation pose - no AprilTag correction
-                    position_data = {
-                        'coordinates': current_pose.tolist(),
-                        'joints': current_joints.round(3).tolist(),
-                        'description': metadata['description'],
-                        'equipment': metadata.get('equipment_name'),
-                        'position_type': metadata.get('position_type', 'grasp'),
-                        'priority': metadata.get('priority', 'normal'),
-                        'safety_notes': metadata.get('safety_notes', ''),
-                        'tag_reference': None,
-                        'has_apriltag_view': False,
-                        'camera_to_tag': None,
-                        'observation_pose': observation_pose,
-                        'pose_type': 'position',  # Mark as work position
-                        'timestamp': state['timestamp']
-                    }
-                    
-                    if not hasattr(self.taught_positions, 'positions'):
-                        self.taught_positions['positions'] = {}
-                    self.taught_positions['positions'][position_name] = position_data
-                    self.save_positions()
-                    
-                    if observation_pose:
-                        print(f"✅ Position '{position_name}' taught with observation pose: {observation_pose}")
-                    else:
-                        print(f"✅ Position '{position_name}' taught without AprilTag correction")
-                    
-                    # Prompt for safe offset position after successful teaching
-                    try:
-                        create_safe = input("\n🛡️  Create associated safe position? (Y/n): ").lower().strip()
-                        if create_safe != 'n' and create_safe != 'no':
-                            self.create_simple_safe_offset(position_name)
-                    except (EOFError, KeyboardInterrupt):
-                        print("\n💡 Skipping safe position creation")
-                        
+            # Create initial position data
+            position_data = {
+                'coordinates': current_pose.tolist(),
+                'joints': current_joints.round(3).tolist(),
+                'description': metadata['description'],
+                'pose_type': 'work'
+            }
+            
+            # Save initial position first
+            self.taught_positions['positions'][position_name] = position_data
+            self.save_positions()
+            print(f"✅ Position '{position_name}' taught successfully")
+            
+            # Handle equipment association and observation pose setup
+            self._handle_equipment_association(position_name, state)
+            
+            # Prompt for safe offset position after successful teaching
+            try:
+                create_safe = input("\n🛡️  Create associated safe position? (Y/n): ").lower().strip()
+                if create_safe != 'n' and create_safe != 'no':
+                    self.create_simple_safe_offset(position_name)
+            except (EOFError, KeyboardInterrupt):
+                print("\n💡 Skipping safe position creation")
+            
             return True
             
         except KeyboardInterrupt:
@@ -710,27 +782,30 @@ class PositionTeacher:
                 final_movement = np.linalg.norm(final_pose[:3] - initial_pose[:3])
                 print(f"📏 Total movement: {final_movement*1000:.1f}mm")
                 
-                # Create position data
+                # Capture current state for equipment association
+                print("\n📷 Capturing scene for equipment association...")
+                state = self.capture_current_state()
+                state['robot_pose'] = final_pose
+                state['joint_positions'] = final_joints
+                
+                # Create initial position data
                 position_data = {
                     'coordinates': final_pose.tolist(),
                     'joints': final_joints.round(3).tolist(),
                     'description': description,
-                    'tag_reference': None,
-                    'has_apriltag_view': False,
-                    'camera_to_tag': None,
-                    'observation_pose': None,
-                    'pose_type': 'position',
-                    'taught_with_freedrive': True,
-                    'timestamp': time.time()
+                    'pose_type': 'work'
                 }
                 
-                # Save position
+                # Save initial position
                 if 'positions' not in self.taught_positions:
                     self.taught_positions['positions'] = {}
                 self.taught_positions['positions'][position_name] = position_data
                 self.save_positions()
                 
                 print(f"✅ Position '{position_name}' taught successfully with freedrive!")
+                
+                # Handle equipment association and observation pose setup
+                self._handle_equipment_association(position_name, state)
                 
                 # Prompt for safe offset position after successful teaching
                 try:
@@ -793,10 +868,32 @@ class PositionTeacher:
             print("\n" + "=" * 60)
             print("🔍 OBSERVATION POSE MODE")
             print("=" * 60)
-            print("📍 Use the teach pendant to manually move the robot arm")
+            
+            # Connect with freedrive capability
+            if not self.connect_for_freedrive():
+                print("❌ Failed to establish freedrive connection")
+                return False
+            
+            # Enable freedrive mode for easier positioning
+            print("🔧 Enabling freedrive mode for easier positioning...")
+            freedrive_enabled = False
+            try:
+                # Attempt to enable freedrive mode
+                freedrive_enabled = self.enable_freedrive()
+                if freedrive_enabled:
+                    print("🎮 You can now move the robot manually")
+                else:
+                    print("⚠️  Could not enable freedrive mode")
+                    print("📍 Please enable freedrive mode on the teach pendant manually")
+                    print("💡 Make sure 'Remote Control' is enabled on teach pendant")
+            except Exception as e:
+                print(f"⚠️  Could not enable freedrive mode: {e}")
+                print("📍 Please enable freedrive mode on the teach pendant manually")
+                print("💡 Make sure 'Remote Control' is enabled on teach pendant")
+            
             print("🎯 Position the robot to observe AprilTags on the equipment")
             print("📷 The camera MUST detect AprilTags from this position")
-            print("⚠️  Make sure the robot is in local control mode!")
+            print("💡 Tip: Enable 'Remote Control' on teach pendant if not already enabled")
             print("=" * 60)
             
             # Wait for user to position robot manually
@@ -868,13 +965,10 @@ class PositionTeacher:
                 'coordinates': current_pose.tolist(),
                 'joints': current_joints.round(3).tolist(),
                 'description': description,
-                'tag_reference': f"tag_{tag_id}",
-                'has_apriltag_view': True,
-                'camera_to_tag': self._extract_camera_to_tag_transform(selected_apriltag),
-                'observation_pose': None,  # Observation poses don't reference other observation poses
-                'equipment_name': equipment_name,  # MANDATORY equipment link
                 'pose_type': 'observation',  # Mark as observation pose
-                'timestamp': state['timestamp']
+                'tag_reference': f"tag_{tag_id}",
+                'camera_to_tag': self._extract_camera_to_tag_transform(selected_apriltag),
+                'equipment_name': equipment_name,  # MANDATORY equipment link
             }
             
             self.taught_positions['positions'][position_name] = position_data
@@ -883,13 +977,29 @@ class PositionTeacher:
             print(f"⚙️  Linked to equipment: {equipment_name}")
             print(f"🏷️  Primary AprilTag: {tag_id}")
             
+            # Disable freedrive mode after successful teaching
+            try:
+                self.disable_freedrive()
+            except Exception as e:
+                print(f"⚠️  Warning: Could not disable freedrive: {e}")
+            
             return True
             
         except KeyboardInterrupt:
             print("\n⚠️  Observation pose teaching interrupted")
+            # Try to disable freedrive on interruption
+            try:
+                self.disable_freedrive()
+            except Exception as e:
+                print(f"⚠️  Warning: Could not disable freedrive: {e}")
             return False
         except Exception as e:
             print(f"❌ Failed to teach observation pose: {e}")
+            # Try to disable freedrive on error
+            try:
+                self.disable_freedrive()
+            except Exception as e:
+                print(f"⚠️  Warning: Could not disable freedrive: {e}")
             return False
     
     def _extract_camera_to_tag_transform(self, apriltag_data):
@@ -999,10 +1109,23 @@ class PositionTeacher:
             base_coords = base_data['coordinates']
             safe_coords = [base_coords[i] + offset[i] for i in range(6)]
             
-            # Create safe position data
-            safe_data = base_data.copy()
+            # Create safe position data (deep copy to avoid YAML reference issues)
+            import copy
+            safe_data = copy.deepcopy(base_data)
             safe_data['coordinates'] = safe_coords
             safe_data['description'] = f"Safe {direction_name.lower()} position ({distance_mm}mm from {base_position_name})"
+            
+            # Update observation_offset for the safe position (calculate new offset from observation pose)
+            if safe_data.get('observation_pose'):
+                obs_pose_name = safe_data['observation_pose']
+                if obs_pose_name in self.taught_positions['positions']:
+                    obs_coords = np.array(self.taught_positions['positions'][obs_pose_name]['coordinates'])
+                    safe_coords_array = np.array(safe_coords)
+                    new_offset = (safe_coords_array - obs_coords).tolist()
+                    safe_data['observation_offset'] = new_offset
+                else:
+                    # If observation pose doesn't exist, use zero offset
+                    safe_data['observation_offset'] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             
             # Update camera-to-tag if it exists (adjust distance for offsets)
             if safe_data.get('camera_to_tag') and (offset[1] != 0 or offset[2] != 0):
@@ -1068,7 +1191,9 @@ class PositionTeacher:
             
             try:
                 initial_pose = self.robot.get_tcp_pose()
-                print(f"📍 Saving current position: {[round(x, 3) for x in initial_pose]}")
+                # Convert numpy array to regular list for display
+                initial_pose_list = [float(x) for x in initial_pose]
+                print(f"📍 Saving current position: {[round(x, 3) for x in initial_pose_list]}")
             except Exception as e:
                 print(f"⚠️  Could not get current position: {e}")
                 initial_pose = None
@@ -1081,8 +1206,13 @@ class PositionTeacher:
                 position_data = self.taught_positions['positions'][position_name]
                 target_pose = position_data['coordinates']
                 
+                # Convert list to numpy array for robot movement
+                target_pose_array = np.array(target_pose, dtype=float)
+                
                 print(f"🎯 Target: {[round(x, 3) for x in target_pose]}")
-                success = self.robot.move_to_pose(target_pose)
+                print("⏳ Moving robot... (this may take a few seconds)")
+                
+                success = self.robot.move_to_pose(target_pose_array)
                 
                 if success:
                     print("✅ Movement successful - safe position is reachable!")
@@ -1094,6 +1224,9 @@ class PositionTeacher:
                     # Return to initial position if we have it
                     if initial_pose is not None:
                         print("🔄 Returning to initial position...")
+                        # Ensure initial_pose is numpy array
+                        if not isinstance(initial_pose, np.ndarray):
+                            initial_pose = np.array(initial_pose, dtype=float)
                         return_success = self.robot.move_to_pose(initial_pose)
                         
                         if return_success:
@@ -1114,10 +1247,13 @@ class PositionTeacher:
                 if initial_pose is not None:
                     try:
                         print("🔄 Attempting to return to initial position...")
+                        # Ensure initial_pose is numpy array
+                        if not isinstance(initial_pose, np.ndarray):
+                            initial_pose = np.array(initial_pose, dtype=float)
                         self.robot.move_to_pose(initial_pose)
                         print("✅ Returned to initial position after failed test")
-                    except:
-                        print("⚠️  Could not return to initial position after failed test")
+                    except Exception as return_error:
+                        print(f"⚠️  Could not return to initial position after failed test: {return_error}")
                 
                 return False
                 
@@ -1193,7 +1329,7 @@ class PositionTeacher:
         positions = self.taught_positions.get('positions', {})
         
         for name, data in positions.items():
-            if data.get('has_apriltag_view', False):
+            if data.get('tag_reference') and data.get('camera_to_tag'):
                 apriltag_positions.append(name)
         
         return apriltag_positions
@@ -1212,7 +1348,7 @@ class PositionTeacher:
             
         # Check if observation pose has AprilTag view
         obs_data = positions[observation_pose]
-        if not obs_data.get('has_apriltag_view', False):
+        if not (obs_data.get('tag_reference') and obs_data.get('camera_to_tag')):
             print(f"❌ Observation pose '{observation_pose}' does not have AprilTag view")
             return False
             
@@ -1366,13 +1502,13 @@ class PositionTeacher:
             
         # Validate observation pose has AprilTag view
         obs_pose = positions[observation_pose_name]
-        if not obs_pose.get('has_apriltag_view', False):
+        if not (obs_pose.get('tag_reference') and obs_pose.get('camera_to_tag')):
             print(f"❌ '{observation_pose_name}' is not a valid observation pose (no AprilTag view)")
             return False
             
         # Check if position already has direct AprilTag view
         position = positions[position_name]
-        if position.get('has_apriltag_view', False):
+        if position.get('tag_reference') and position.get('camera_to_tag'):
             print(f"⚠️  Position '{position_name}' already has direct AprilTag view")
             confirm = input("Link to observation pose anyway? (y/N): ").lower().strip()
             if confirm != 'y':
@@ -1400,11 +1536,11 @@ class PositionTeacher:
         for name, data in positions.items():
             desc = data.get('description', 'No description')
             timestamp = data.get('timestamp', 'Unknown time')
-            has_apriltag = data.get('has_apriltag_view', False)
+            has_apriltag = bool(data.get('tag_reference') and data.get('camera_to_tag'))
             tag_reference = data.get('tag_reference')
             observation_pose = data.get('observation_pose')
             equipment_name = data.get('equipment_name')
-            pose_type = data.get('pose_type', 'position')
+            pose_type = data.get('pose_type', 'work')
             
             print(f"🎯 {name}")
             if pose_type == 'observation':

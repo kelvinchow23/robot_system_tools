@@ -92,7 +92,7 @@ paths:
   photos_dir: "photos"
   logs_dir: "logs"
   archive_dir: "archive"
-  taught_positions_file: "taught_positions.yaml"
+  taught_positions_file: "positions/taught_positions.yaml"
 
 # Position Teaching Configuration
 position_teaching:
@@ -127,3 +127,31 @@ safety:
     y_max: 0.5
     z_min: 0.0
     z_max: 0.5
+
+# Visual Servoing Configuration
+visual_servo:
+  # Correction parameters
+  max_iterations: 3  # Maximum number of correction iterations
+  detection_samples: 5  # Number of detection samples for median filtering
+  detection_timeout: 5.0  # Timeout for AprilTag detection in seconds
+  
+  # Convergence tolerances
+  position_tolerance: 0.002  # Position tolerance for convergence in meters (2mm)
+  rotation_tolerance: 0.017  # Rotation tolerance for convergence in radians (~1 degree)
+  
+  # Safety limits per iteration
+  safety_limits:
+    max_translation: 0.05  # Maximum translation correction per iteration in meters (5cm)
+    max_rotation: 0.175  # Maximum rotation correction per iteration in radians (~10 degrees)
+    max_total_correction: 0.1  # Maximum total correction across all iterations in meters (10cm)
+  
+  # Pose history management
+  enable_pose_history: true  # Enable pose correction history tracking
+  max_history_entries: 50  # Maximum number of history entries per position
+  auto_update_positions: true  # Automatically update stored positions after successful correction
+  
+  # Advanced settings
+  coordinate_frame: "camera"  # Reference frame for corrections: camera, robot_base
+  correction_method: "direct"  # Correction method: direct, transform_chain
+  enable_drift_detection: true  # Enable automatic drift detection
+  drift_check_interval: 300  # Drift check interval in seconds (5 minutes)

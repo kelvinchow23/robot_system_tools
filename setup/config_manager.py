@@ -30,16 +30,19 @@ class ConfigManager:
     @staticmethod
     def find_project_root():
         """Find project root by looking for marker files"""
-        current = Path(__file__).parent
+        current = Path(__file__).parent  # Start from setup directory
         
-        marker_files = ['config.yaml', 'apriltag_detection.py', 'README.md']
+        # Since config.yaml is in setup/, we need to look for project-level markers
+        project_markers = ['apriltag_detection.py', 'README.md', '.git']
         
         while current != current.parent:
-            if any((current / marker).exists() for marker in marker_files):
-                return current
+            # Check parent directory for project markers
+            if any((current.parent / marker).exists() for marker in project_markers):
+                return current.parent
             current = current.parent
         
-        return Path(__file__).parent
+        # If not found, assume parent of setup directory is project root
+        return Path(__file__).parent.parent
     
     def get_config_path(self, config_file: str = "config.yaml") -> Path:
         """Get path to configuration file"""
@@ -152,12 +155,16 @@ class ConfigManager:
         
         # Special handling for positions files
         if relative_path == 'taught_positions.yaml':
-            # First try new positions directory
+            # First try positions directory
             positions_path = project_root / "positions" / relative_path
             if positions_path.exists():
                 return positions_path
-            # Fallback to old location
-            return project_root / relative_path
+            # Also try setup directory for backwards compatibility
+            setup_path = project_root / "setup" / relative_path
+            if setup_path.exists():
+                return setup_path
+            # Default to positions directory even if file doesn't exist yet
+            return positions_path
         
         return project_root / relative_path
     
