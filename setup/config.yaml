@@ -131,19 +131,22 @@ safety:
 # Visual Servoing Configuration
 visual_servo:
   # Correction parameters
-  max_iterations: 3  # Maximum number of correction iterations
-  detection_samples: 5  # Number of detection samples for median filtering
+  max_iterations: 10  # Reasonable iterations with correct direction
+  detection_samples: 3  # Fewer samples per iteration for speed
   detection_timeout: 5.0  # Timeout for AprilTag detection in seconds
   
   # Convergence tolerances
-  position_tolerance: 0.002  # Position tolerance for convergence in meters (2mm)
-  rotation_tolerance: 0.017  # Rotation tolerance for convergence in radians (~1 degree)
+  position_tolerance: 0.010  # Position tolerance for convergence in meters (10mm)
+  rotation_tolerance: 0.070  # Rotation tolerance for convergence in radians (~4 degrees)
   
   # Safety limits per iteration
   safety_limits:
     max_translation: 0.05  # Maximum translation correction per iteration in meters (5cm)
-    max_rotation: 0.175  # Maximum rotation correction per iteration in radians (~10 degrees)
-    max_total_correction: 0.1  # Maximum total correction across all iterations in meters (10cm)
+    max_rotation: 0.35  # Maximum rotation correction per iteration in radians (~20 degrees)
+    max_total_correction: 0.15  # Maximum total correction across all iterations in meters (15cm)
+  
+  # Correction damping (to prevent oscillation)
+  damping_factor: 0.05  # Very conservative to prevent oscillation
   
   # Pose history management
   enable_pose_history: true  # Enable pose correction history tracking

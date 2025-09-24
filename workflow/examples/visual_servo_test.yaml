@@ -10,13 +10,13 @@ workflow_info:
 steps:
   # Step 1: Move to home position
   - action: movel
-    position: home
+    position: safe-home
     speed: 0.2
     description: "Move to safe home position"
 
   # Step 2: Move to observation position (manual positioning)
   - action: movel
-    position: observe_workspace
+    position: observe-B
     speed: 0.1
     description: "Move to workspace observation position"
 
@@ -27,10 +27,10 @@ steps:
 
   # Step 4: Visual servo to grasp position
   - action: visual_servo
-    position: grasp_target
+    position: grasp-B
     speed: 0.05
     type: movel
-    description: "Visual servo to grasp position using AprilTag correction"
+    description: "Visual servo to grasp-B position using AprilTag correction"
 
   # Step 5: Open gripper to prepare for grasping
   - action: gripper_open

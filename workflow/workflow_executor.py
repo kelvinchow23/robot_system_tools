@@ -10,7 +10,6 @@ import numpy as np
 from datetime import datetime
 from pathlib import Path
 import sys
-import os
 
 # Add parent directory and setup directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -28,13 +27,14 @@ except ImportError as e:
     print(f"⚠️  Visual servoing not available: {e}")
     VISUAL_SERVO_AVAILABLE = False
 
+
 class WorkflowExecutor:
     """Execute robot workflows defined in YAML format"""
-    
+
     def __init__(self, taught_positions_file=None):
         """
         Initialize workflow executor
-        
+
         Args:
             taught_positions_file: Path to taught positions YAML file
         """
@@ -42,20 +42,20 @@ class WorkflowExecutor:
         self.taught_positions = {}
         self.workflow_history = []
         self.visual_servo_engine = None
-        
+
         # Load taught positions
         if taught_positions_file is None:
             taught_positions_file = Path(__file__).parent.parent / "positions" / "taught_positions.yaml"
-        
+
         self.positions_file = Path(taught_positions_file)
         self.load_taught_positions()
-        
+
         # Initialize visual servo engine
         self.init_visual_servo_engine()
-        
-        print(f"🤖 Workflow Executor initialized")
+
+        print("🤖 Workflow Executor initialized")
         print(f"📍 Loaded {len(self.taught_positions.get('positions', {}))} taught positions")
-    
+
     def load_taught_positions(self):
         """Load taught positions from YAML file"""
         try:
@@ -69,56 +69,56 @@ class WorkflowExecutor:
         except Exception as e:
             print(f"❌ Error loading positions: {e}")
             self.taught_positions = {'positions': {}}
-    
+
     def init_visual_servo_engine(self):
         """Initialize visual servo engine if available"""
         try:
             # Import AprilTag detector
             from apriltag_detection import AprilTagDetector
-            
+
             # Initialize visual servo engine without robot (robot set later)
             detector = AprilTagDetector()
             self.visual_servo_engine = VisualServoEngine(None, self.positions_file, detector)
-            print(f"✅ Visual servo engine initialized")
+            print("✅ Visual servo engine initialized")
         except Exception as e:
             print(f"⚠️  Visual servo engine unavailable: {e}")
             self.visual_servo_engine = None
-    
+
     def connect_robot(self):
         """Connect to the robot"""
         try:
             robot_ip = config.get('robot', {}).get('ip', '192.168.0.10')
             # URController connects automatically in __init__
             self.robot = URController(robot_ip, read_only=False)
-            
+
             # Check if connection was successful by testing basic functionality
             try:
                 _ = self.robot.get_tcp_pose()
                 print(f"🔌 Connected to robot at {robot_ip}")
-                
+
                 # Initialize visual servo engine now that robot is connected
                 if self.visual_servo_engine:
                     self.visual_servo_engine.set_robot_controller(self.robot)
-                
+
                 return True
             except Exception as e:
                 print(f"❌ Robot not responding: {e}")
                 return False
-                
+
         except Exception as e:
             print(f"❌ Robot connection error: {e}")
             return False
-    
+
     def disconnect_robot(self):
         """Disconnect from robot"""
         if self.robot:
             self.robot.close()  # URController uses close() method
             print("🔌 Disconnected from robot")
-    
+
     def execute_workflow(self, workflow_file, step_mode=False):
         """
         Execute a workflow from YAML file
-        
+
         Args:
             workflow_file: Path to workflow YAML file
             step_mode: If True, prompt user before each step
@@ -127,20 +127,20 @@ class WorkflowExecutor:
         if not workflow_path.exists():
             print(f"❌ Workflow file not found: {workflow_path}")
             return False
-        
+
         try:
             with open(workflow_path, 'r') as f:
                 workflow = yaml.safe_load(f)
         except Exception as e:
             print(f"❌ Error loading workflow: {e}")
             return False
-        
+
         return self.execute_workflow_dict(workflow, step_mode)
-    
+
     def execute_workflow_dict(self, workflow, step_mode=False):
         """
         Execute a workflow from dictionary
-        
+
         Args:
             workflow: Workflow dictionary
             step_mode: If True, prompt user before each step
@@ -152,22 +152,22 @@ class WorkflowExecutor:
         workflow_name = workflow.get('name', 'Unnamed Workflow')
         description = workflow.get('description', 'No description')
         steps = workflow.get('steps', [])
-        
+
         print(f"\n🚀 Executing Workflow: {workflow_name}")
         print(f"📝 Description: {description}")
         print(f"📋 Steps: {len(steps)}")
         if step_mode:
             print("🐾 Step-by-step mode: Press ENTER to continue each step, 'q' to quit")
         print("=" * 60)
-        
+
         start_time = datetime.now()
         success_count = 0
-        
+
         for i, step in enumerate(steps, 1):
             # Auto-generate step name based on action and parameters
             action = step.get('action', 'unknown')
             step_name = self._generate_step_name(step, i)
-            
+
             # Auto-skip delays in step-through mode
             if step_mode and action == 'delay':
                 duration = step.get('duration', 0)
@@ -176,7 +176,7 @@ class WorkflowExecutor:
                 success_count += 1
                 print(f"✅ Step {i} completed successfully")
                 continue
-            
+
             # Step-by-step prompting for non-delay steps
             if step_mode:
                 print(f"\n🔍 Next step {i}/{len(steps)}: {step_name}")
@@ -185,15 +185,15 @@ class WorkflowExecutor:
                     move_type = "Joint move" if action == 'movej' else "Linear move"
                     print(f"   Action: {move_type} to position '{position}'")
                 elif action == 'gripper_open':
-                    print(f"   Action: Open gripper")
+                    print("   Action: Open gripper")
                 elif action == 'gripper_close':
-                    print(f"   Action: Close gripper")
+                    print("   Action: Close gripper")
                 elif action == 'offset_move':
-                    offset = step.get('offset', [0,0,0,0,0,0])
+                    offset = step.get('offset', [0, 0, 0, 0, 0, 0])
                     print(f"   Action: Offset move {offset}")
                 else:
                     print(f"   Action: {action}")
-                
+
                 try:
                     user_input = input("Continue? (ENTER/q to quit/s to skip): ").lower().strip()
                     if user_input == 'q' or user_input == 'quit':
@@ -205,23 +205,23 @@ class WorkflowExecutor:
                 except (EOFError, KeyboardInterrupt):
                     print("\n🛑 Workflow interrupted by user")
                     break
-            
+
             print(f"\n⏩ Step {i}/{len(steps)}: {step_name}")
-            
+
             if self.execute_step(step, step_mode):
                 success_count += 1
                 print(f"✅ Step {i} completed successfully")
             else:
                 print(f"❌ Step {i} failed - stopping workflow")
                 break
-        
+
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
-        
+
         print("\n" + "=" * 60)
         print(f"🏁 Workflow Complete: {success_count}/{len(steps)} steps successful")
         print(f"⏱️  Duration: {duration:.2f} seconds")
-        
+
         # Record workflow execution
         self.workflow_history.append({
             'name': workflow_name,
@@ -232,13 +232,13 @@ class WorkflowExecutor:
             'steps_successful': success_count,
             'success': success_count == len(steps)
         })
-        
+
         return success_count == len(steps)
-    
+
     def execute_step(self, step, step_mode=False):
         """Execute a single workflow step"""
         action = step.get('action', '').lower()
-        
+
         try:
             if action in ['movel', 'movej']:
                 return self._move_to_position(step)
@@ -263,32 +263,32 @@ class WorkflowExecutor:
             else:
                 print(f"❌ Unknown action: {action}")
                 return False
-                
+
         except Exception as e:
             print(f"❌ Step execution error: {e}")
             return False
-    
+
     def _generate_step_name(self, step, step_number):
         """Generate a descriptive step name based on action and parameters"""
         action = step.get('action', 'unknown').lower()  # Convert to lowercase for consistency
         name = step.get('name')  # Use explicit name if provided
-        
+
         if name:
             return name
-        
+
         if action in ['movel', 'movej']:
             position = step.get('position', 'unknown')
             move_type = "Joint move" if action == 'movej' else "Move"
             return f"{move_type} to {position}"
         elif action == 'offset_move':
-            offset = step.get('offset', [0,0,0,0,0,0])
+            offset = step.get('offset', [0, 0, 0, 0, 0, 0])
             # Format offset nicely - show only non-zero values
             offset_str = []
             labels = ['X', 'Y', 'Z', 'Rx', 'Ry', 'Rz']
             for i, val in enumerate(offset[:6]):
                 if val != 0:
                     if i < 3:  # Position
-                        offset_str.append(f"{labels[i]}:{val*1000:.0f}mm")
+                        offset_str.append(f"{labels[i]}:{val * 1000:.0f}mm")
                     else:  # Rotation
                         offset_str.append(f"{labels[i]}:{val:.3f}rad")
             return f"Offset move ({', '.join(offset_str) if offset_str else 'no offset'})"
@@ -312,53 +312,53 @@ class WorkflowExecutor:
             return f"Visual servo to {position}"
         else:
             return f"Step {step_number} ({action})"
-    
+
     def _move_to_position(self, step):
         """Move to a taught position with optional visual servoing"""
         position_name = step.get('position')
         speed = step.get('speed', 0.1)  # Default 10% speed
         action = step.get('action', '').lower()
         use_visual_servo = step.get('visual_servo', False)
-        
+
         if not position_name:
             print("❌ No position specified")
             return False
-        
+
         positions = self.taught_positions.get('positions', {})
         if position_name not in positions:
             print(f"❌ Position '{position_name}' not found")
             return False
-        
+
         position_data = positions[position_name]
         coordinates = position_data['coordinates']
-        
+
         # Determine movement type
         if action == 'movej':
             print(f"🔄 Joint move to position: {position_name}")
         else:
             print(f"🎯 Linear move to position: {position_name}")
-        
+
         # Check if visual servoing is requested
         if use_visual_servo and self.visual_servo_engine:
             print(f"�️ Visual servoing enabled for {position_name}")
-            
+
             # Use visual servo engine to get corrected pose
             try:
                 corrected_pose = self.visual_servo_engine.get_corrected_pose(position_name, coordinates)
                 if corrected_pose is not None:
                     target_pose = corrected_pose
-                    print(f"✅ Using visual servo corrected pose")
+                    print("✅ Using visual servo corrected pose")
                 else:
                     target_pose = np.array(coordinates)
-                    print(f"⚠️ Visual servo correction failed, using original pose")
+                    print("⚠️ Visual servo correction failed, using original pose")
             except Exception as e:
                 print(f"⚠️ Visual servo error: {e}, using original pose")
                 target_pose = np.array(coordinates)
         else:
             target_pose = np.array(coordinates)
-        
+
         print(f"📍 Target coordinates: {[f'{x:.3f}' for x in target_pose]}")
-        
+
         # Use joint move or linear move based on action
         if action == 'movej':
             # For now, joint moves use the same function (could be extended in URController)
@@ -367,22 +367,22 @@ class WorkflowExecutor:
         else:
             # Linear move (default) - uses moveL commands
             return self.robot.move_to_pose(target_pose, speed=speed)
-    
+
     def _offset_move(self, step):
         """Move by an offset from current position"""
         offset = step.get('offset', [0, 0, 0, 0, 0, 0])
         speed = step.get('speed', 0.1)
         coordinate_system = step.get('coordinate_system', 'tcp')  # 'tcp' or 'base'
-        
+
         if len(offset) != 6:
             print("❌ Offset must be [x, y, z, rx, ry, rz]")
             return False
-        
+
         print(f"📐 Offset move: {[f'{x:.3f}' for x in offset]} ({coordinate_system})")
-        
+
         # Get current position
         current_pose = self.robot.get_tcp_pose()
-        
+
         # Apply offset
         if coordinate_system == 'tcp':
             # For TCP coordinate system, we need to transform the offset
@@ -390,9 +390,9 @@ class WorkflowExecutor:
             target_pose = current_pose + np.array(offset)
         else:  # base coordinate system
             target_pose = current_pose + np.array(offset)
-        
+
         return self.robot.move_to_pose(target_pose, speed=speed)
-    
+
     def _gripper_open(self, step):
         """Open the gripper"""
         print("✋ Opening gripper...")
@@ -403,7 +403,7 @@ class WorkflowExecutor:
             print(f"⏳ Waiting {wait_time}s for gripper to open...")
             time.sleep(wait_time)
         return success
-    
+
     def _gripper_close(self, step):
         """Close the gripper"""
         print("✊ Closing gripper...")
@@ -414,7 +414,7 @@ class WorkflowExecutor:
             print(f"⏳ Waiting {wait_time}s for gripper to close...")
             time.sleep(wait_time)
         return success
-    
+
     def _gripper_activate(self, step):
         """Activate the gripper (required before first use)"""
         print("🤖 Activating gripper...")
@@ -424,7 +424,7 @@ class WorkflowExecutor:
             wait_time = step.get('wait_time', 2.0)  # Reduced default from 3.0
             print(f"⏳ Waiting {wait_time}s for gripper activation...")
             time.sleep(wait_time)
-            
+
             # Set default force and speed after activation
             print("🔧 Setting gripper parameters...")
             try:
@@ -434,7 +434,7 @@ class WorkflowExecutor:
                 time.sleep(0.2)  # Reduced from 0.5
             except Exception as e:
                 print(f"⚠️ Warning: Could not set gripper parameters: {e}")
-            
+
             # Check status
             try:
                 status = self.robot.gripper_get_status()
@@ -442,9 +442,9 @@ class WorkflowExecutor:
                     print(f"📊 Gripper status: {status.get('raw_response', 'Ready')}")
             except Exception as e:
                 print(f"⚠️ Warning: Could not get gripper status: {e}")
-            
+
         return success
-    
+
     def _delay(self, step, step_mode=False):
         """Wait for specified time"""
         duration = step.get('duration', 1.0)
@@ -454,96 +454,91 @@ class WorkflowExecutor:
             print(f"⏳ Waiting {duration} seconds...")
             time.sleep(duration)
         return True
-    
+
     def _verify_position(self, step):
         """Verify current position matches expected position"""
         position_name = step.get('position')
         tolerance = step.get('tolerance', 0.01)  # 1cm tolerance
-        
+
         if not position_name:
             print("❌ No position specified for verification")
             return False
-        
+
         positions = self.taught_positions.get('positions', {})
         if position_name not in positions:
             print(f"❌ Position '{position_name}' not found")
             return False
-        
+
         expected_pose = np.array(positions[position_name]['coordinates'])
         current_pose = self.robot.get_tcp_pose()
-        
+
         # Check position difference (translation only)
         pos_diff = np.linalg.norm(current_pose[:3] - expected_pose[:3])
-        
+
         print(f"🔍 Verifying position: {position_name}")
         print(f"📏 Position difference: {pos_diff:.4f}m (tolerance: {tolerance}m)")
-        
+
         if pos_diff <= tolerance:
             print("✅ Position verification passed")
             return True
         else:
-            print(f"❌ Position verification failed - difference too large")
+            print("❌ Position verification failed - difference too large")
             return False
-    
+
     def _visual_servo_action(self, step):
         """Execute visual servoing to correct position based on AprilTag detection"""
         position_name = step.get('position')
-        speed = step.get('speed', 0.1)  # Default 10% speed
-        action_type = step.get('type', 'movel').lower()  # 'movel' or 'movej'
-        
+
         if not position_name:
             print("❌ No position specified for visual servo")
             return False
-        
+
         if not self.visual_servo_engine:
             print("❌ Visual servo engine not available")
             return False
-        
+
         positions = self.taught_positions.get('positions', {})
         if position_name not in positions:
             print(f"❌ Position '{position_name}' not found")
             return False
-        
-        position_data = positions[position_name]
-        original_coordinates = position_data['coordinates']
-        
+
         print(f"👁️ Starting visual servo to position: {position_name}")
-        
+
         try:
             # Execute visual servoing
             success, result_data = self.visual_servo_engine.visual_servo_to_position(
-                position_name, 
+                position_name,
                 update_stored_pose=True
             )
-            
+
             if success:
                 print("✅ Visual servo completed successfully")
                 return True
             else:
                 print("❌ Visual servo failed")
                 return False
-                
+
         except Exception as e:
             print(f"❌ Visual servo error: {e}")
             return False
-    
+
     def get_workflow_history(self):
         """Get workflow execution history"""
         return self.workflow_history
-    
+
     def list_available_positions(self):
         """List all available taught positions"""
         positions = self.taught_positions.get('positions', {})
         print(f"\n📋 Available Positions ({len(positions)}):")
         print("=" * 50)
-        
+
         for name, data in positions.items():
             pos_type = data.get('pose_type', 'unknown')
             description = data.get('description', 'No description')
             print(f"🎯 {name} ({pos_type})")
             if description:
                 print(f"   📝 {description}")
-    
+
     def _gripper_position(self, step):
         """Set gripper to specific position"""
         position = step.get('position', 128)  # Default to half-closed
@@ -555,59 +550,59 @@ class WorkflowExecutor:
             print(f"⏳ Waiting {wait_time}s for gripper to move to position...")
             time.sleep(wait_time)
         return success
-    
+
     def _gripper_params(self, step):
         """Set gripper force and/or speed parameters"""
         force = step.get('force')
         speed = step.get('speed')
-        
+
         success = True
         if force is not None:
             print(f"💪 Setting gripper force to {force}...")
             if not self.robot.gripper_set_force(force):
                 success = False
             time.sleep(0.5)
-        
+
         if speed is not None:
             print(f"⚡ Setting gripper speed to {speed}...")
             if not self.robot.gripper_set_speed(speed):
                 success = False
             time.sleep(0.5)
-        
+
         return success
 
 
 def main():
     """Main function for standalone execution"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description='Robot Workflow Executor')
     parser.add_argument('workflow', help='Workflow YAML file to execute')
     parser.add_argument('--positions', help='Taught positions YAML file')
     parser.add_argument('--list-positions', action='store_true', help='List available positions')
-    
+
     args = parser.parse_args()
-    
+
     # Create executor
     executor = WorkflowExecutor(args.positions)
-    
+
     if args.list_positions:
         executor.list_available_positions()
         return
-    
+
     # Connect to robot
     if not executor.connect_robot():
         return
-    
+
     try:
         # Execute workflow
         success = executor.execute_workflow(args.workflow)
-        
+
         if success:
             print("\n🎉 Workflow executed successfully!")
         else:
             print("\n💥 Workflow execution failed!")
-            
+
     finally:
         executor.disconnect_robot()
 
